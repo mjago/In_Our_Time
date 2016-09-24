@@ -60,8 +60,8 @@ class InOurTime
       else
         :unknown
       end
+      sleep 0.05
     end
-    sleep 0.1
   end
 
   def initialize
