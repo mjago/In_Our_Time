@@ -5,15 +5,17 @@ require 'net/http'
 require 'open-uri'
 
 class InOurTime
-
-  CHECK_REMOTE    = false
+  CHECK_REMOTE    = true
   AUDIO_DIRECTORY = 'audio'
+  PAGE_LENGTH     = 20
+  PAGE_WIDTH      = 80
 
   class KeyboardEvents
 
     @arrow = 0
 
     def input
+      sleep 0.001
       begin
         system("stty raw -echo")
         str = STDIN.getc
@@ -60,19 +62,12 @@ class InOurTime
       else
         :unknown
       end
-      sleep 0.05
     end
   end
 
   def initialize
-    @programs = []
-    @page_length = 20
-    @line_count =  @page_length
-    @selected = 0
-    @playing = nil
-    @play = nil
-    @help = nil
-
+    @programs, @selected = [], 0
+    @line_count = PAGE_LENGTH
     check_remote
     parse_programs
     sort_titles
@@ -80,14 +75,14 @@ class InOurTime
   end
 
   def rss_addresses
-    [
-      "http://www.bbc.co.uk/programmes/b006qykl/episodes/downloads.rss",
-      "http://www.bbc.co.uk/programmes/p01drwny/episodes/downloads.rss",
-      "http://www.bbc.co.uk/programmes/p01dh5yg/episodes/downloads.rss",
-      "http://www.bbc.co.uk/programmes/p01f0vzr/episodes/downloads.rss",
-      "http://www.bbc.co.uk/programmes/p01gvqlg/episodes/downloads.rss",
-      "http://www.bbc.co.uk/programmes/p01gyd7j/episodes/downloads.rss"
-    ]
+    host = 'http://www.bbc.co.uk/programmes'
+    [ "/b006qykl/episodes/downloads.rss",
+      "/p01drwny/episodes/downloads.rss",
+      "/p01dh5yg/episodes/downloads.rss",
+      "/p01f0vzr/episodes/downloads.rss",
+      "/p01gvqlg/episodes/downloads.rss",
+      "/p01gyd7j/episodes/downloads.rss"
+    ].collect{|page| host + page}
   end
 
   def local_rss
@@ -125,7 +120,7 @@ class InOurTime
       end
       true
     else
-      puts 'audio download from redirect failed'
+      puts 'audio download from redirect failed. Retrying...'
     end
   end
 
@@ -140,7 +135,7 @@ class InOurTime
   def check_remote
     if CHECK_REMOTE
       local_rss.length.times do |count|
-        puts 'downloading' + local_rss[count]
+        puts "checking rss #{count}"
         fetch_uri rss_addresses[count], local_rss[count]
       end
     end
@@ -202,7 +197,6 @@ class InOurTime
     unless prg[:have_locally]
       retries = 0
       10.times do
-        puts "retries = #{retries}"
         res = Net::HTTP.get_response(URI.parse(prg[:link]))
         case res
         when Net::HTTPFound
@@ -256,6 +250,9 @@ class InOurTime
     puts
     if @playing
       puts "Playing '#{@playing}'"
+    elsif @started.nil?
+      @started = true
+      puts "? or h for instructions"
     else
       puts
     end
@@ -271,7 +268,7 @@ class InOurTime
 
   def draw_page
     if @line_count <= @sorted_titles.length
-      @line_count.upto(@line_count + @page_length - 1) do |idx|
+      @line_count.upto(@line_count + PAGE_LENGTH - 1) do |idx|
         if idx < @sorted_titles.length
           print "> " if(idx == @selected)
           print "#{idx + 1}. "
@@ -280,13 +277,13 @@ class InOurTime
       end
     else
       @line_count = 0
-      0.upto(@page_length - 1) do |idx|
+      0.upto(PAGE_LENGTH - 1) do |idx|
         print "> " if(idx == @selected)
         print "#{idx + 1}. "     unless @sorted_titles[idx].nil?
         puts @sorted_titles[idx] unless @sorted_titles[idx].nil?
       end
     end
-    @line_count += @page_length
+    @line_count += PAGE_LENGTH
     print_playing_maybe
   end
 
@@ -297,14 +294,14 @@ class InOurTime
       draw_page
     when :previous_page
       if @line_count > 0
-        @line_count -= (@page_length * 2)
+        @line_count -= (PAGE_LENGTH * 2)
       else
         @line_count = @sorted_titles.length
         @selected = @line_count
       end
       draw_page
     when :same_page
-      @line_count -= @page_length
+      @line_count -= PAGE_LENGTH
       draw_page
     end
   end
@@ -313,20 +310,24 @@ class InOurTime
     unless @help
       system 'clear'
       puts
-      puts "    In Our Time Player       "
+      puts " In Our Time Player (Help)   "
       puts
-      puts " next      - N (down arrow)  "
-      puts " previous  - P (up arrow)    "
-      puts " next page -   (right arrow) "
-      puts " next page -   (space)       "
-      puts " play      - X (return)      "
-      puts " stop      - S               "
-      puts " list      - L               "
-      puts " help      - H               "
-      puts " quit      - Q               "
-      12.upto(@page_length - 1) do
-        puts
-      end
+      puts " Next      - N (down arrow)  "
+      puts " Previous  - P (up arrow)    "
+      puts " Next Page -   (right arrow) "
+      puts " Next Page -   (space)       "
+      puts " Play      - X (return)      "
+      puts " Stop      - S               "
+      puts " List      - L               "
+      puts " Info      - I               "
+      puts " Help      - H               "
+      puts " Quit      - Q               "
+      puts
+      puts " tl;dr:                      "
+      puts
+      puts "  Select: up/down arrows     "
+      puts "  Play:   enter              "
+      18.upto(PAGE_LENGTH - 1) {puts}
       print_playing_maybe
       @help = true
     else
@@ -335,12 +336,45 @@ class InOurTime
     end
   end
 
+  def reformat info
+    info.gsub('With ', "\nWith ")
+      .gsub('With: ', "\nWith: ")
+      .gsub('Producer', "- Producer")
+  end
+
+  def justify info
+    collect, top, bottom = [], 0, PAGE_WIDTH
+    loop do
+      if(bottom >= info.length)
+        collect << info[top..-1].strip
+        break
+      end
+      loop do
+        break unless info[top] == ' '
+        top += 1 ; bottom += 1
+      end
+      loop do
+        if idx = info[top..bottom].index("\n")
+          collect << info[top..top + idx]
+          bottom, top = top + idx + PAGE_WIDTH + 1, top + idx + 1
+          next
+        else
+          break if (info[bottom] == ' ')
+          bottom -= 1
+        end
+      end
+      collect << info[top..bottom]
+      bottom, top = bottom + PAGE_WIDTH, bottom
+    end
+    collect
+  end
+
   def info
     if @info.nil?
       system 'clear'
       puts
       prg = select_program @sorted_titles[@selected]
-      puts prg[:subtitle].gsub("\n", ' ').gsub('  ', ' ')
+      puts justify(prg[:subtitle].gsub(/\s+/, ' '))
       puts
       puts "Date Broadcast: #{prg[:date][0..16]}"
       puts "Duration:       #{prg[:duration].to_i/60} mins"
@@ -350,7 +384,8 @@ class InOurTime
       system 'clear'
       puts
       prg = select_program @sorted_titles[@selected]
-      puts prg[:summary].gsub("\n", ' ').gsub('  ', ' ')
+      info = prg[:summary].gsub(/\s+/, ' ')
+      puts justify(reformat(info))
       @info = -1
     else
       display_list :same_page
@@ -362,9 +397,7 @@ class InOurTime
     display_list :same_page
     key = KeyboardEvents.new
     loop do
-
       ip = key.input
-
       @info = nil unless ip == :info
       @help = nil unless ip == :help
 
@@ -378,7 +411,7 @@ class InOurTime
         display_list :draw_page
       when :previous
         @selected -= 1 if @selected > 0
-        if @selected >= @line_count - @page_length
+        if @selected >= @line_count - PAGE_LENGTH
           display_list :same_page
         else
           display_list :previous_page
