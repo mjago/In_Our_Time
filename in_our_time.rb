@@ -4,12 +4,14 @@ require 'open-uri'
 require 'net/http'
 require 'open-uri'
 require 'yaml'
+require 'fileutils'
 
 class InOurTime
   HERE = Dir.pwd
   UPDATE_INTERVAL = 604800
   CONFIG          = File.join HERE, 'config.yml'
   AUDIO_DIRECTORY = 'audio'
+  RSS_DIRECTORY   = 'rss'
   PAGE_LENGTH     = 20
   PAGE_WIDTH      = 80
 
@@ -72,15 +74,26 @@ class InOurTime
   def initialize
     @programs, @selected = [], 0
     @line_count = PAGE_LENGTH
+    setup
     load_config
     check_remote
-    parse_programs
+    parse_rss
     sort_titles
     run
   end
 
   def now
     Time.now.to_i
+  end
+
+  def setup
+    audio = File.join HERE, AUDIO_DIRECTORY
+    pages = File.join HERE, RSS_DIRECTORY
+    Dir.mkdir audio unless Dir.exist? audio
+    unless Dir.exist? pages
+      Dir.mkdir pages
+      local_rss.map{|f| FileUtils.touch(File.join pages, f)}
+    end
   end
 
   def update_remote?
@@ -118,12 +131,12 @@ class InOurTime
 
   def local_rss
     [
-      "pages/culture.rss",
-      "pages/history.rss",
-      "pages/in_our_time.rss",
-      "pages/philosophy.rss",
-      "pages/religion.rss",
-      "pages/science.rss"
+      "culture.rss",
+      "history.rss",
+      "in_our_time.rss",
+      "philosophy.rss",
+      "religion.rss",
+      "science.rss"
     ]
   end
 
@@ -137,7 +150,7 @@ class InOurTime
 
   def filename_from_title title
     temp = title.gsub(/[^0-9a-z ]/i, '').gsub(' ', '_').strip + '.mp3'
-    File.join('audio', temp.downcase)
+    File.join(AUDIO_DIRECTORY, temp.downcase)
   end
 
   def download_audio program, addr
@@ -151,7 +164,7 @@ class InOurTime
       end
       true
     else
-      puts 'audio download from redirect failed. Retrying...'
+      puts 'audio download failed. Retrying...'
     end
   end
 
@@ -163,12 +176,16 @@ class InOurTime
     false
   end
 
+  def rss_files
+    local_rss.map{|f| File.join HERE, RSS_DIRECTORY, f }
+  end
+
   def check_remote
     if update_remote?
       print "checking rss feeds "
       local_rss.length.times do |count|
         print '.'
-        fetch_uri rss_addresses[count], local_rss[count]
+        fetch_uri rss_addresses[count], rss_files[count]
       end
       puts
       @config[:last_update] = now
@@ -184,8 +201,8 @@ class InOurTime
     end
   end
 
-  def parse_programs
-    local_rss.each do |file|
+  def parse_rss
+    rss_files.each do |file|
       @doc = Nokogiri::XML(File.open(file))
       titles    = @doc.xpath("//item//title")
       descs     = @doc.xpath("//item//description")
