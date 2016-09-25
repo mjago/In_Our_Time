@@ -1,11 +1,14 @@
-require 'rss'
 require 'nokogiri'
+require 'rss'
 require 'open-uri'
 require 'net/http'
 require 'open-uri'
+require 'yaml'
 
 class InOurTime
-  CHECK_REMOTE    = false
+  HERE = Dir.pwd
+  UPDATE_INTERVAL = 604800
+  CONFIG          = File.join HERE, 'config.yml'
   AUDIO_DIRECTORY = 'audio'
   PAGE_LENGTH     = 20
   PAGE_WIDTH      = 80
@@ -69,10 +72,37 @@ class InOurTime
   def initialize
     @programs, @selected = [], 0
     @line_count = PAGE_LENGTH
+    load_config
     check_remote
     parse_programs
     sort_titles
     run
+  end
+
+  def now
+    Time.now.to_i
+  end
+
+  def update_remote?
+    now - @config[:update_interval] > @config[:last_update]
+  end
+
+  def new_config
+    {:last_update => now - UPDATE_INTERVAL - 1,
+     :update_interval => UPDATE_INTERVAL,
+     :colour => false
+    }
+  end
+
+  def load_config
+    unless File.exist? CONFIG
+      save_config new_config
+    end
+    @config = YAML::load_file(CONFIG)
+  end
+
+  def save_config cfg = @config
+    File.open(CONFIG, 'w') { |f| f.write cfg.to_yaml}
   end
 
   def rss_addresses
@@ -134,11 +164,15 @@ class InOurTime
   end
 
   def check_remote
-    if CHECK_REMOTE
+    if update_remote?
+      print "checking rss feeds "
       local_rss.length.times do |count|
-        puts "checking rss #{count}"
+        print '.'
         fetch_uri rss_addresses[count], local_rss[count]
       end
+      puts
+      @config[:last_update] = now
+      save_config
     end
   end
 
