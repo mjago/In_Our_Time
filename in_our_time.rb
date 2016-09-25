@@ -5,7 +5,7 @@ require 'net/http'
 require 'open-uri'
 
 class InOurTime
-  CHECK_REMOTE    = true
+  CHECK_REMOTE    = false
   AUDIO_DIRECTORY = 'audio'
   PAGE_LENGTH     = 20
   PAGE_WIDTH      = 80
@@ -35,6 +35,7 @@ class InOurTime
         return :previous     if str == "A"
         return :next         if str == "B"
         return :page_forward if str == "C"
+        return :previous     if str == "D"
         @arrow = 0
       end
 
@@ -45,7 +46,7 @@ class InOurTime
         :list
       when ' '
         :page_forward
-      when "q",'Q'
+      when "q",'Q', "\u0003", "\u0004"
         :quit
       when 'p', 'P'
         :previous
