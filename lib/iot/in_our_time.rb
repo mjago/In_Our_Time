@@ -12,7 +12,7 @@ class InOurTime
   CONFIG          = File.join HERE, 'config.yml'
   AUDIO_DIRECTORY = 'audio'
   RSS_DIRECTORY   = 'rss'
-  PAGE_LENGTH     = 20
+  PAGE_HEIGHT     = 20
   PAGE_WIDTH      = 80
 
   class KeyboardEvents
@@ -73,7 +73,6 @@ class InOurTime
 
   def initialize
     @programs, @selected = [], 0
-    @line_count = PAGE_LENGTH
     setup
     load_config
     check_remote
@@ -113,10 +112,12 @@ class InOurTime
   def new_config
     {:last_update => now - UPDATE_INTERVAL - 1,
      :update_interval => UPDATE_INTERVAL,
-     :colour => false,
+     :colour => true,
      :mpg_player => :afplay,
      :sort => :age,
-     :show_count => true
+     :show_count => true,
+     :page_height => PAGE_HEIGHT,
+     :page_width  => PAGE_WIDTH
     }
   end
 
@@ -125,6 +126,7 @@ class InOurTime
       save_config new_config
     end
     @config = YAML::load_file(CONFIG)
+    @line_count = @config[:page_height]
   end
 
   def save_config cfg = @config
@@ -175,7 +177,7 @@ class InOurTime
         f.print(res.body)
         iot_puts " written.", :yellow
       end
-      true
+      program[:have_locally] = true
     else
       iot_puts 'audio download failed. Retrying...', :yellow
     end
@@ -289,11 +291,11 @@ class InOurTime
   def run_program prg
     unless prg[:have_locally]
       retries = 0
+      iot_puts "fetching #{prg[:title]}", :yellow
       10.times do
         res = Net::HTTP.get_response(URI.parse(prg[:link]))
         case res
         when Net::HTTPFound
-          iot_puts "fetching #{prg[:title]}", :yellow
           iot_puts 'redirecting...', :yellow
           @doc = Nokogiri::XML(res.body)
           redirect = @doc.css("body p a").text
@@ -352,7 +354,7 @@ class InOurTime
 
   def draw_page
     if @line_count <= @sorted_titles.length
-      @line_count.upto(@line_count + PAGE_LENGTH - 1) do |idx|
+      @line_count.upto(@line_count + @config[:page_height] - 1) do |idx|
         if idx < @sorted_titles.length
           iot_print "> " if(idx == @selected) unless @config[:colour]
           show_count_maybe idx
@@ -362,13 +364,13 @@ class InOurTime
       end
     else
       @line_count = 0
-      0.upto(PAGE_LENGTH - 1) do |idx|
+      0.upto(@config[:page_height] - 1) do |idx|
         iot_print "> " if(idx == @selected)
         show_count_maybe(idx) unless @sorted_titles[idx].nil?
         iot_puts @sorted_titles[idx] unless @sorted_titles[idx].nil?
       end
     end
-    @line_count += PAGE_LENGTH
+    @line_count += @config[:page_height]
     print_playing_maybe
   end
 
@@ -379,14 +381,14 @@ class InOurTime
       draw_page
     when :previous_page
       if @line_count > 0
-        @line_count -= (PAGE_LENGTH * 2)
+        @line_count -= (@config[:page_height] * 2)
       else
         @line_count = @sorted_titles.length
         @selected = @line_count
       end
       draw_page
     when :same_page
-      @line_count -= PAGE_LENGTH
+      @line_count -= @config[:page_height]
       draw_page
     end
   end
@@ -412,7 +414,7 @@ class InOurTime
       iot_puts ''
       iot_puts "  Select: up/down arrows     "
       iot_puts "  Play:   enter              "
-      18.upto(PAGE_LENGTH - 1) {iot_puts}
+      18.upto(@config[:page_height] - 1) {iot_puts}
       print_playing_maybe
       @help = true
     else
@@ -428,7 +430,7 @@ class InOurTime
   end
 
   def justify info
-    collect, top, bottom = [], 0, PAGE_WIDTH
+    collect, top, bottom = [], 0, @config[:page_width]
     loop do
       if(bottom >= info.length)
         collect << info[top..-1].strip
@@ -441,7 +443,7 @@ class InOurTime
       loop do
         if idx = info[top..bottom].index("\n")
           collect << info[top..top + idx]
-          bottom, top = top + idx + PAGE_WIDTH + 1, top + idx + 1
+          bottom, top = top + idx + @config[:page_width] + 1, top + idx + 1
           next
         else
           break if (info[bottom] == ' ')
@@ -449,7 +451,7 @@ class InOurTime
         end
       end
       collect << info[top..bottom]
-      bottom, top = bottom + PAGE_WIDTH, bottom
+      bottom, top = bottom + @config[:page_width], bottom
     end
     collect
   end
@@ -463,7 +465,8 @@ class InOurTime
       iot_puts ''
       iot_puts "Date Broadcast: #{prg[:date]}"
       iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
-      iot_puts "Availability:   " + (prg[:have_locally] ? "Downloaded" : "Requires Download")
+      iot_puts "Availability:   " +
+               (prg[:have_locally] ? "Downloaded" : "Requires Download")
       @info = 1
     elsif @info == 1
       system 'clear'
@@ -496,7 +499,8 @@ class InOurTime
         display_list :draw_page
       when :previous
         @selected -= 1 if @selected > 0
-        if @selected >= @line_count - PAGE_LENGTH
+        if @selected >= @line_count -
+           @config[:page_height]
           display_list :same_page
         else
           display_list :previous_page
