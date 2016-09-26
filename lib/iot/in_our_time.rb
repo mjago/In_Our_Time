@@ -114,7 +114,9 @@ class InOurTime
     {:last_update => now - UPDATE_INTERVAL - 1,
      :update_interval => UPDATE_INTERVAL,
      :colour => false,
-     :mpg_player => :afplay
+     :mpg_player => :afplay,
+     :sort => :age,
+     :show_count => true
     }
   end
 
