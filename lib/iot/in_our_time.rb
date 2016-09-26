@@ -82,6 +82,16 @@ class InOurTime
     run
   end
 
+  def iot_print x, role = :default
+    colour_print(role, x) if @config[:colour]
+    print(x) unless @config[:colour]
+  end
+
+  def iot_puts x, role = :default
+    colour_puts(role, x) if @config[:colour]
+    puts(x) unless @config[:colour]
+  end
+
   def now
     Time.now.to_i
   end
@@ -103,7 +113,8 @@ class InOurTime
   def new_config
     {:last_update => now - UPDATE_INTERVAL - 1,
      :update_interval => UPDATE_INTERVAL,
-     :colour => false
+     :colour => false,
+     :mpg_player => :afplay
     }
   end
 
@@ -157,7 +168,7 @@ class InOurTime
     res = Net::HTTP.get_response(URI.parse(addr))
     case res
     when Net::HTTPOK
-      File.open( filename_from_title(program[:title]) , 'wb') do |f|
+      File.open(filename_from_title(program[:title]) , 'wb') do |f|
         print "writing #{filename_from_title(program[:title])}..."
         f.print(res.body)
         puts " written."
@@ -245,6 +256,25 @@ class InOurTime
     @sorted_titles = @sorted_titles.uniq{|x| x.downcase}
   end
 
+  def player_cmd
+    case @config[:mpg_player]
+    when :mpg123
+      "mpg123 -qk395"
+    else
+      "afplay"
+    end
+  end
+
+  def kill_cmd
+    "killall " +
+      case @config[:mpg_player]
+      when :mpg123
+        "mpg123"
+      else
+        "afplay"
+      end
+  end
+
   def run_program prg
     unless prg[:have_locally]
       retries = 0
@@ -271,32 +301,11 @@ class InOurTime
     end
     @play = Thread.new do
       @playing = prg[:title]
-      system "afplay #{filename_from_title(@playing)}"
+      system player_cmd + ' ' +
+             filename_from_title(@playing)
       @playing = nil
     end
   end
-
-#  @programs.each do |pr|
-#    url = pr[:link]
-#    unless pr[:have_locally] && false
-#      5.times do
-#        res = Net::HTTP.get_response(URI.parse(url))
-#        case res
-#        when Net::HTTPFound
-#          puts "fetching #{pr[:title]}"
-#          puts 'redirecting...'
-#          @doc = Nokogiri::XML(res.body)
-#          redirect = @doc.css("body p a").text
-#          exit if download_audio(pr, redirect)
-#          sleep 2
-#        else
-#          puts 'Error! Expected to be redirected!'
-#          exit 1
-#        end
-#      end
-#      puts "Max retries downloading #{pr[:title]}"
-#    end
-#  end
 
   def print_playing_maybe
     puts
@@ -312,7 +321,7 @@ class InOurTime
 
   def kill_audio
     if @playing
-      system 'killall afplay' if @play
+      system kill_cmd if @play
       @play.kill if @play
       @playing = nil
     end
@@ -322,17 +331,18 @@ class InOurTime
     if @line_count <= @sorted_titles.length
       @line_count.upto(@line_count + PAGE_LENGTH - 1) do |idx|
         if idx < @sorted_titles.length
-          print "> " if(idx == @selected)
-          print "#{idx + 1}. "
-          puts @sorted_titles[idx]
+          iot_print "> " if(idx == @selected) unless @config[:colour]
+          iot_print "#{idx + 1}. ",      :purple if @config[:show_count]
+          iot_puts @sorted_titles[idx],  :purple    if    (idx == @selected)
+          iot_puts @sorted_titles[idx],  :default unless(idx == @selected)
         end
       end
     else
       @line_count = 0
       0.upto(PAGE_LENGTH - 1) do |idx|
-        print "> " if(idx == @selected)
-        print "#{idx + 1}. "     unless @sorted_titles[idx].nil?
-        puts @sorted_titles[idx] unless @sorted_titles[idx].nil?
+        iot_print "> " if(idx == @selected)
+        iot_print "#{idx + 1}. "     unless @sorted_titles[idx].nil?
+        iot_puts @sorted_titles[idx] unless @sorted_titles[idx].nil?
       end
     end
     @line_count += PAGE_LENGTH
