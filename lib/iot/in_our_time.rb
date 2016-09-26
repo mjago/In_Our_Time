@@ -338,11 +338,15 @@ class InOurTime
     end
   end
 
+  def idx_format idx
+    sprintf("%03d, ", idx + 1)
+  end
+
   def show_count_maybe idx
     if have_locally?(@sorted_titles[idx])
-      iot_print "#{idx + 1}. ", :cyan if @config[:show_count]
+      iot_print idx_format(idx), :cyan if @config[:show_count]
     else
-      iot_print "#{idx + 1}. ", :yellow if @config[:show_count]
+      iot_print idx_format(idx), :yellow if @config[:show_count]
     end
   end
 
