@@ -338,12 +338,20 @@ class InOurTime
     end
   end
 
+  def show_count_maybe idx
+    if have_locally?(@sorted_titles[idx])
+      iot_print "#{idx + 1}. ", :cyan if @config[:show_count]
+    else
+      iot_print "#{idx + 1}. ", :yellow if @config[:show_count]
+    end
+  end
+
   def draw_page
     if @line_count <= @sorted_titles.length
       @line_count.upto(@line_count + PAGE_LENGTH - 1) do |idx|
         if idx < @sorted_titles.length
           iot_print "> " if(idx == @selected) unless @config[:colour]
-          iot_print "#{idx + 1}. ",      :purple if @config[:show_count]
+          show_count_maybe idx
           iot_puts @sorted_titles[idx],  :purple    if    (idx == @selected)
           iot_puts @sorted_titles[idx],  :default unless(idx == @selected)
         end
@@ -352,7 +360,7 @@ class InOurTime
       @line_count = 0
       0.upto(PAGE_LENGTH - 1) do |idx|
         iot_print "> " if(idx == @selected)
-        iot_print "#{idx + 1}. "     unless @sorted_titles[idx].nil?
+        show_count_maybe(idx) unless @sorted_titles[idx].nil?
         iot_puts @sorted_titles[idx] unless @sorted_titles[idx].nil?
       end
     end
