@@ -6,14 +6,6 @@ require 'open-uri'
 require 'yaml'
 require 'fileutils'
 
-puts Time.new "Thu, 23 Jun 2016"
-
-x = DateTime.strptime("Thu, 23 Jun 2016", '%a, %d %b %Y')
-y = DateTime.strptime("Fri, 24 Jun 2016", '%a, %d %b %Y')
-p x < y
-p DateTime.strptime("Thu, 23 Jun 2016", '%a, %d %b %Y')
-
-
 class InOurTime
   HERE = Dir.pwd
   UPDATE_INTERVAL = 604800
@@ -259,7 +251,8 @@ class InOurTime
   def sort_titles
     @sorted_titles = []
     @sorted_titles = @programs.collect { |pr| pr[:title] }
-    @sorted_titles = @sorted_titles.uniq{|x| x.downcase}
+#    @sorted_titles = @sorted_titles.uniq{|x| x.downcase}
+    @sorted_titles = @sorted_titles.sort unless @config[:sort] == :age
   end
 
   def date
