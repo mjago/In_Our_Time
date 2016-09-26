@@ -7,9 +7,10 @@ require 'yaml'
 require 'fileutils'
 
 class InOurTime
-  HERE = Dir.pwd
+  ROOT = File.expand_path '~/'
+  IN_OUR_TIME = File.join ROOT, '.in_our_time'
+  CONFIG          = File.join IN_OUR_TIME, 'config.yml'
   UPDATE_INTERVAL = 604800
-  CONFIG          = File.join HERE, 'config.yml'
   AUDIO_DIRECTORY = 'audio'
   RSS_DIRECTORY   = 'rss'
   PAGE_HEIGHT     = 20
@@ -96,8 +97,10 @@ class InOurTime
   end
 
   def setup
-    audio = File.join HERE, AUDIO_DIRECTORY
-    pages = File.join HERE, RSS_DIRECTORY
+    iot = IN_OUR_TIME
+    audio = File.join iot, AUDIO_DIRECTORY
+    pages = File.join iot, RSS_DIRECTORY
+    Dir.mkdir iot unless Dir.exist? iot
     Dir.mkdir audio unless Dir.exist? audio
     unless Dir.exist? pages
       Dir.mkdir pages
@@ -165,7 +168,7 @@ class InOurTime
 
   def filename_from_title title
     temp = title.gsub(/[^0-9a-z ]/i, '').gsub(' ', '_').strip + '.mp3'
-    File.join(AUDIO_DIRECTORY, temp.downcase)
+    File.join(File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase)
   end
 
   def download_audio program, addr
@@ -192,7 +195,7 @@ class InOurTime
   end
 
   def rss_files
-    local_rss.map{|f| File.join HERE, RSS_DIRECTORY, f }
+    local_rss.map{|f| File.join IN_OUR_TIME, RSS_DIRECTORY, f }
   end
 
   def check_remote
