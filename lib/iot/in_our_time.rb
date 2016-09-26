@@ -6,6 +6,14 @@ require 'open-uri'
 require 'yaml'
 require 'fileutils'
 
+puts Time.new "Thu, 23 Jun 2016"
+
+x = DateTime.strptime("Thu, 23 Jun 2016", '%a, %d %b %Y')
+y = DateTime.strptime("Fri, 24 Jun 2016", '%a, %d %b %Y')
+p x < y
+p DateTime.strptime("Thu, 23 Jun 2016", '%a, %d %b %Y')
+
+
 class InOurTime
   HERE = Dir.pwd
   UPDATE_INTERVAL = 604800
@@ -230,7 +238,7 @@ class InOurTime
         program[:subtitle] = subtitles[idx].text
         program[:summary]  = summarys[idx].text
         program[:duration] = durations[idx].text
-        program[:date] = dates[idx].text
+        program[:date] = (dates[idx].text)[0..15]
         program[:link] = links[idx].text
         program[:have_locally] = have_locally?(titles[idx].text)
         @programs << program
@@ -250,16 +258,24 @@ class InOurTime
 
   def sort_titles
     @sorted_titles = []
-    @programs.each do |pr|
-      @sorted_titles << pr[:title]
-    end
+    @sorted_titles = @programs.collect { |pr| pr[:title] }
     @sorted_titles = @sorted_titles.uniq{|x| x.downcase}
+  end
+
+  def date
+    @programs.map {|pr| return pr[:date] if pr[:title] == @playing}
+  end
+
+  def pre_delay
+    x = DateTime.strptime("Mon, 20 Jun 2016", '%a, %d %b %Y')
+    y = DateTime.strptime(date, '%a, %d %b %Y')
+    y < x ? '410' : '435'
   end
 
   def player_cmd
     case @config[:mpg_player]
     when :mpg123
-      "mpg123 -qk395"
+      "mpg123 -qk#{pre_delay}"
     else
       "afplay"
     end
@@ -438,7 +454,7 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       puts justify(prg[:subtitle].gsub(/\s+/, ' '))
       puts
-      puts "Date Broadcast: #{prg[:date][0..16]}"
+      puts "Date Broadcast: #{prg[:date]}"
       puts "Duration:       #{prg[:duration].to_i/60} mins"
       puts "Availability:   " + (prg[:have_locally] ? "Downloaded" : "Requires Download")
       @info = 1
