@@ -399,25 +399,22 @@ class InOurTime
   def help
     unless @help
       system 'clear'
-      iot_puts ''
-      iot_puts " In Our Time Player (Help)   "
-      iot_puts ''
-      iot_puts " Next      - N (down arrow)  "
-      iot_puts " Previous  - P (up arrow)    "
-      iot_puts " Next Page -   (right arrow) "
-      iot_puts " Next Page -   (space)       "
-      iot_puts " Play      - X (return)      "
-      iot_puts " Stop      - S               "
-      iot_puts " List      - L               "
-      iot_puts " Info      - I               "
-      iot_puts " Help      - H               "
-      iot_puts " Quit      - Q               "
-      iot_puts ''
-      iot_puts " tl;dr:                      "
-      iot_puts ''
-      iot_puts "  Select: up/down arrows     "
-      iot_puts "  Play:   enter              "
-      18.upto(@config[:page_height] - 1) {iot_puts}
+      iot_puts " In Our Time Player (Help)       "
+      iot_puts "                                 "
+      iot_puts " Next      - N (down arrow)      "
+      iot_puts " Previous  - P (up arrow)        "
+      iot_puts " Next Page -    (SPACE)          "
+      iot_puts " Play      - X (return)          "
+      iot_puts " Stop      - S                   "
+      iot_puts " List      - L                   "
+      iot_puts " Info      - I                   "
+      iot_puts " Help      - H                   "
+      iot_puts " Quit      - Q                   "
+      iot_puts "  TL;DR                          "
+      iot_puts "Select: up/down arrows           "
+      iot_puts "Play:   enter                    "
+      iot_puts "Config: ~/.in_our_time/config.yml"
+      18.upto(@config[:page_height] - 1) {iot_puts ''}
       print_playing_maybe
       @help = true
     else
