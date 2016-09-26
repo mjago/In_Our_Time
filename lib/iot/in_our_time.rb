@@ -171,13 +171,13 @@ class InOurTime
     case res
     when Net::HTTPOK
       File.open(filename_from_title(program[:title]) , 'wb') do |f|
-        print "writing #{filename_from_title(program[:title])}..."
+        iot_print "writing #{filename_from_title(program[:title])}...", :yellow
         f.print(res.body)
-        puts " written."
+        iot_puts " written.", :yellow
       end
       true
     else
-      puts 'audio download failed. Retrying...'
+      iot_puts 'audio download failed. Retrying...', :yellow
     end
   end
 
@@ -195,12 +195,12 @@ class InOurTime
 
   def check_remote
     if update_remote?
-      print "checking rss feeds "
+      iot_print "checking rss feeds ", :yellow
       local_rss.length.times do |count|
         print '.'
         fetch_uri rss_addresses[count], rss_files[count]
       end
-      puts
+      iot_puts ''
       @config[:last_update] = now
       save_config
     end
@@ -209,7 +209,7 @@ class InOurTime
   def uniquify_programs
     @programs = @programs.uniq{|pr| pr[:title]}
     unless @programs.uniq.length == @programs.length
-      puts "Error ensuring Programs unique!"
+      iot_puts "Error ensuring Programs unique!", :red
       exit 1
     end
   end
@@ -293,20 +293,20 @@ class InOurTime
         res = Net::HTTP.get_response(URI.parse(prg[:link]))
         case res
         when Net::HTTPFound
-          puts "fetching #{prg[:title]}"
-          puts 'redirecting...'
+          iot_puts "fetching #{prg[:title]}", :yellow
+          iot_puts 'redirecting...', :yellow
           @doc = Nokogiri::XML(res.body)
           redirect = @doc.css("body p a").text
           break if download_audio(prg, redirect)
           sleep 2
         else
-          puts 'Error! Expected to be redirected!'
+          iot_puts 'Error! Expected to be redirected!', :red
           exit 1
         end
         retries += 1
       end
       if retries >= 10
-        puts "Max retries downloading #{prg[:title]}"
+        iot_puts "Max retries downloading #{prg[:title]}", :red
         exit 1
       end
     end
@@ -319,14 +319,14 @@ class InOurTime
   end
 
   def print_playing_maybe
-    puts
+    iot_puts ''
     if @playing
-      puts "Playing '#{@playing}'"
+      iot_puts "Playing '#{@playing}'"
     elsif @started.nil?
       @started = true
-      puts "? or h for instructions"
+      iot_puts "? or h for instructions"
     else
-      puts
+      iot_puts ''
     end
   end
 
@@ -394,25 +394,25 @@ class InOurTime
   def help
     unless @help
       system 'clear'
-      puts
-      puts " In Our Time Player (Help)   "
-      puts
-      puts " Next      - N (down arrow)  "
-      puts " Previous  - P (up arrow)    "
-      puts " Next Page -   (right arrow) "
-      puts " Next Page -   (space)       "
-      puts " Play      - X (return)      "
-      puts " Stop      - S               "
-      puts " List      - L               "
-      puts " Info      - I               "
-      puts " Help      - H               "
-      puts " Quit      - Q               "
-      puts
-      puts " tl;dr:                      "
-      puts
-      puts "  Select: up/down arrows     "
-      puts "  Play:   enter              "
-      18.upto(PAGE_LENGTH - 1) {puts}
+      iot_puts ''
+      iot_puts " In Our Time Player (Help)   "
+      iot_puts ''
+      iot_puts " Next      - N (down arrow)  "
+      iot_puts " Previous  - P (up arrow)    "
+      iot_puts " Next Page -   (right arrow) "
+      iot_puts " Next Page -   (space)       "
+      iot_puts " Play      - X (return)      "
+      iot_puts " Stop      - S               "
+      iot_puts " List      - L               "
+      iot_puts " Info      - I               "
+      iot_puts " Help      - H               "
+      iot_puts " Quit      - Q               "
+      iot_puts ''
+      iot_puts " tl;dr:                      "
+      iot_puts ''
+      iot_puts "  Select: up/down arrows     "
+      iot_puts "  Play:   enter              "
+      18.upto(PAGE_LENGTH - 1) {iot_puts}
       print_playing_maybe
       @help = true
     else
@@ -457,20 +457,20 @@ class InOurTime
   def info
     if @info.nil?
       system 'clear'
-      puts
+      iot_puts ''
       prg = select_program @sorted_titles[@selected]
-      puts justify(prg[:subtitle].gsub(/\s+/, ' '))
-      puts
-      puts "Date Broadcast: #{prg[:date]}"
-      puts "Duration:       #{prg[:duration].to_i/60} mins"
-      puts "Availability:   " + (prg[:have_locally] ? "Downloaded" : "Requires Download")
+      iot_puts justify(prg[:subtitle].gsub(/\s+/, ' '))
+      iot_puts ''
+      iot_puts "Date Broadcast: #{prg[:date]}"
+      iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
+      iot_puts "Availability:   " + (prg[:have_locally] ? "Downloaded" : "Requires Download")
       @info = 1
     elsif @info == 1
       system 'clear'
-      puts
+      iot_puts ''
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
-      puts justify(reformat(info))
+      iot_puts justify(reformat(info))
       @info = -1
     else
       display_list :same_page
