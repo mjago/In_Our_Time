@@ -1,4 +1,4 @@
 #!/usr/bin/env ruby
 
 puts Dir.pwd
-require 'lib/in_our_time.rb'
+require 'in_our_time'
