@@ -22,11 +22,14 @@ class InOurTime
 
     @arrow = 0
 
+    def reset
+      $stdin.flush
+    end
+
     def input
-      sleep 0.001
       begin
         system("stty raw -echo")
-        str = STDIN.getc
+        str = $stdin.getc
       ensure
         system("stty -raw echo")
       end
@@ -84,14 +87,14 @@ class InOurTime
     run
   end
 
-  def iot_print x, col = @text_color
-    print x.colorize col if @config[:color]
-    print x          unless @config[:color]
+  def iot_print x, col = @text_colour
+    print x.colorize col if @config[:colour]
+    print x          unless @config[:colour]
   end
 
-  def iot_puts x, col = @text_color
-    puts x.colorize col if @config[:color]
-    puts x          unless @config[:color]
+  def iot_puts x, col = @text_colour
+    puts x.colorize col if @config[:colour]
+    puts x          unless @config[:colour]
   end
 
   def now
@@ -117,24 +120,26 @@ class InOurTime
   def new_config
     {:last_update => now - UPDATE_INTERVAL - 1,
      :update_interval => UPDATE_INTERVAL,
-     :color => true,
+     :colour => true,
      :mpg_player => :afplay,
      :sort => :age,
      :show_count => true,
      :page_height => PAGE_HEIGHT,
      :page_width  => PAGE_WIDTH,
-     :color_theme => :light_theme,
+     :colour_theme => :light_theme,
      :light_theme => {
-       :selection_color =>  {:color => :magenta, :background => :light_white},
-       :local_color =>  {:color => :cyan, :background => :light_white},
-       :text_color => :default,
-       :system_color => :yellow
+       :selection_colour =>  {:colour => :magenta, :background => :light_white},
+       :count_sel_colour =>  {:colour => :cyan, :background => :light_white},
+       :count_colour => :yellow,
+       :text_colour => :default,
+       :system_colour => :yellow
      },
      :dark_theme => {
-       :selection_color => {:color => :magenta, :background => :light_white},
-       :local_color => {:color => :cyan, :background => :light_white},
-       :text_color => :default,
-       :system_color => :yellow
+       :selection_colour => {:colour => :light_yellow, :background => :light_black},
+       :count_sel_colour => {:colur => :blue, :background => :yellow},
+       :count_colour => :yellow,
+       :text_colour => :default,
+       :system_colour => :yellow
      }
     }
   end
@@ -145,11 +150,12 @@ class InOurTime
     end
     @config = YAML::load_file(CONFIG)
     @line_count = @config[:page_height]
-    theme = @config[:color_theme]
-    @selection_color = @config[theme][:selection_color]
-    @local_color =     @config[theme][:local_color]
-    @text_color =      @config[theme][:text_color]
-    @system_color =    @config[theme][:system_color]
+    theme = @config[:colour_theme]
+    @selection_colour = @config[theme][:selection_colour]
+    @count_sel_colour = @config[theme][:count_sel_colour]
+    @count_colour     = @config[theme][:count_colour]
+    @text_colour      = @config[theme][:text_colour]
+    @system_colour    = @config[theme][:system_colour]
   end
 
   def save_config cfg = @config
@@ -196,13 +202,13 @@ class InOurTime
     case res
     when Net::HTTPOK
       File.open(filename_from_title(program[:title]) , 'wb') do |f|
-        iot_print "writing #{filename_from_title(program[:title])}...", @system_color
+        iot_print "writing #{filename_from_title(program[:title])}...", @system_colour
         f.print(res.body)
-        iot_puts " written.", @system_color
+        iot_puts " written.", @system_colour
       end
       program[:have_locally] = true
     else
-      iot_puts 'audio download failed. Retrying...', @system_color
+      iot_puts 'audio download failed. Retrying...', @system_colour
     end
   end
 
@@ -220,9 +226,9 @@ class InOurTime
 
   def check_remote
     if update_remote?
-      iot_print "checking rss feeds ", @system_color
+      iot_print "checking rss feeds ", @system_colour
       local_rss.length.times do |count|
-        iot_print '.', @system_color
+        iot_print '.', @system_colour
         fetch_uri rss_addresses[count], rss_files[count]
       end
       iot_puts ''
@@ -314,12 +320,12 @@ class InOurTime
   def run_program prg
     unless prg[:have_locally]
       retries = 0
-      iot_puts "fetching #{prg[:title]}", @system_color
+      iot_puts "fetching #{prg[:title]}", @system_colour
       10.times do
         res = Net::HTTP.get_response(URI.parse(prg[:link]))
         case res
         when Net::HTTPFound
-          iot_puts 'redirecting...', @system_color
+          iot_puts 'redirecting...', @system_colour
           @doc = Nokogiri::XML(res.body)
           redirect = @doc.css("body p a").text
           break if download_audio(prg, redirect)
@@ -346,10 +352,10 @@ class InOurTime
   def print_playing_maybe
     iot_puts ''
     if @playing
-      iot_puts "Playing '#{@playing}'", @selection_color
+      iot_puts "Playing '#{@playing}'", @selection_colour
     elsif @started.nil?
       @started = true
-      iot_puts "? or h for instructions", @text_color
+      iot_puts "? or h for instructions", @text_colour
     else
       iot_puts ''
     end
@@ -369,9 +375,9 @@ class InOurTime
 
   def show_count_maybe idx
     if have_locally?(@sorted_titles[idx])
-      iot_print idx_format(idx), @local_color  if @config[:show_count]
+      iot_print idx_format(idx), @count_sel_colour  if @config[:show_count]
     else
-      iot_print idx_format(idx), @system_color if @config[:show_count]
+      iot_print idx_format(idx), @count_colour if @config[:show_count]
     end
     iot_print ' '
   end
@@ -380,18 +386,18 @@ class InOurTime
     if @line_count <= @sorted_titles.length
       @line_count.upto(@line_count + @config[:page_height] - 1) do |idx|
         if idx < @sorted_titles.length
-          iot_print "> " if(idx == @selected) unless @config[:color]
+          iot_print "> " if(idx == @selected) unless @config[:colour]
           show_count_maybe idx
-          iot_puts @sorted_titles[idx], @selection_color if (idx == @selected)
-          iot_puts @sorted_titles[idx], @text_color         unless(idx == @selected)
+          iot_puts @sorted_titles[idx], @selection_colour if (idx == @selected)
+          iot_puts @sorted_titles[idx], @text_colour         unless(idx == @selected)
         end
       end
     else
       @line_count = 0
       0.upto(@config[:page_height] - 1) do |idx|
-        iot_print "> ", @selection_color if(idx == @selected)
+        iot_print "> ", @selection_colour if(idx == @selected)
         show_count_maybe(idx) unless @sorted_titles[idx].nil?
-        iot_puts @sorted_titles[idx], @text_color unless @sorted_titles[idx].nil?
+        iot_puts @sorted_titles[idx], @text_colour unless @sorted_titles[idx].nil?
       end
     end
     @line_count += @config[:page_height]
@@ -479,9 +485,9 @@ class InOurTime
 
   def info
     if @info.nil?
+      prg = select_program @sorted_titles[@selected]
       system 'clear'
       iot_puts ''
-      prg = select_program @sorted_titles[@selected]
       justify(prg[:subtitle].gsub(/\s+/, ' ')).map{|x| iot_puts x}
       iot_puts ''
       iot_puts "Date Broadcast: #{prg[:date]}"
@@ -490,10 +496,10 @@ class InOurTime
                (prg[:have_locally] ? "Downloaded" : "Requires Download")
       @info = 1
     elsif @info == 1
-      system 'clear'
-      iot_puts ''
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
+      system 'clear'
+      iot_puts ''
       justify(reformat(info)).map{|x| iot_puts x}
       @info = -1
     else
@@ -503,53 +509,58 @@ class InOurTime
   end
 
   def run
+    action = :unknown
     display_list :same_page
     key = KeyboardEvents.new
     loop do
+      unless action == :unknown
+        key.reset
+      end
+
       ip = key.input
       @info = nil unless ip == :info
       @help = nil unless ip == :help
 
-      case ip
-      when :list
-        @line_count = 0
-        @selected = 0
-        display_list :draw_page
-      when :page_forward
-        @selected = @line_count
-        display_list :draw_page
-      when :previous
-        @selected -= 1 if @selected > 0
-        if @selected >= @line_count -
-           @config[:page_height]
-          display_list :same_page
-        else
-          display_list :previous_page
-        end
-      when :next
-        @selected += 1
-        if @selected <= @line_count - 1
-          display_list :same_page
-        else
+      action =
+        case ip
+        when :list
+          @line_count = 0
+          @selected = 0
           display_list :draw_page
+        when :page_forward
+          @selected = @line_count
+          display_list :draw_page
+        when :previous
+          @selected -= 1 if @selected > 0
+          if @selected >= @line_count -
+             @config[:page_height]
+            display_list :same_page
+          else
+            display_list :previous_page
+          end
+        when :next
+          @selected += 1
+          if @selected <= @line_count - 1
+            display_list :same_page
+          else
+            display_list :draw_page
+          end
+        when :play
+          kill_audio
+          title = @sorted_titles[@selected]
+          pr = select_program title
+          run_program pr
+          display_list :same_page
+        when :stop
+          kill_audio
+        when :info
+          info
+        when :help
+          help
+        when :quit
+          kill_audio
+          exit 0
         end
-      when :play
-        kill_audio
-        title = @sorted_titles[@selected]
-        pr = select_program title
-        run_program pr
-        display_list :same_page
-      when :stop
-        kill_audio
-      when :info
-        info
-      when :help
-        help
-      when :quit
-        kill_audio
-        exit 0
-      end
-      sleep 0.001
     end
   end
 end
