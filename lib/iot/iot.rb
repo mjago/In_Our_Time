@@ -457,10 +457,11 @@ class InOurTime
   end
 
   def justify info
-    collect, top, bottom = [], 0, @config[:page_width]
+    pages = [[],[]]
+    page, top, bottom = 0, 0, @config[:page_width]
     loop do
       if(bottom >= info.length)
-        collect << info[top..-1].strip
+        pages[page] << info[top..-1].strip
         break
       end
       loop do
@@ -469,18 +470,18 @@ class InOurTime
       end
       loop do
         if idx = info[top..bottom].index("\n")
-          collect << info[top..top + idx]
-          bottom, top = top + idx + @config[:page_width] + 1, top + idx + 1
+          pages[page] << info[top..top + idx]
+          page,bottom,top = 1,top + idx + @config[:page_width] + 1, top + idx + 1
           next
         else
           break if (info[bottom] == ' ')
           bottom -= 1
         end
       end
-      collect << info[top..bottom]
+      pages[page] << info[top..bottom]
       bottom, top = bottom + @config[:page_width], bottom
     end
-    collect
+    pages
   end
 
   def info
@@ -488,7 +489,7 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       system 'clear'
       iot_puts ''
-      justify(prg[:subtitle].gsub(/\s+/, ' ')).map{|x| iot_puts x}
+      justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
       iot_puts ''
       iot_puts "Date Broadcast: #{prg[:date]}"
       iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
@@ -500,7 +501,14 @@ class InOurTime
       info = prg[:summary].gsub(/\s+/, ' ')
       system 'clear'
       iot_puts ''
-      justify(reformat(info)).map{|x| iot_puts x}
+      justify(reformat(info))[0].map{|x| iot_puts x}
+      @info = 2
+    elsif @info == 2
+      prg = select_program @sorted_titles[@selected]
+      info = prg[:summary].gsub(/\s+/, ' ')
+      system 'clear'
+      iot_puts ''
+      justify(reformat(info))[1].map{|x| iot_puts x}
       @info = -1
     else
       display_list :same_page
