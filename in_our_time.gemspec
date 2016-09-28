@@ -5,7 +5,7 @@ $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 Gem::Specification.new do |spec|
   spec.name        = 'in_our_time'
   spec.version     = File.read('VERSION')
-  spec.date        = '2016-09-26'
+  spec.date        = '2016-09-28'
   spec.authors     = ["Martyn Jago"]
   spec.email       = ["martyn.jago@btinternet.com"]
   spec.description = "In Our Time Player"
