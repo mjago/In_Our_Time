@@ -488,7 +488,6 @@ class InOurTime
     if @info.nil?
       prg = select_program @sorted_titles[@selected]
       system 'clear'
-      iot_puts ''
       justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
       iot_puts ''
       iot_puts "Date Broadcast: #{prg[:date]}"
@@ -500,14 +499,12 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
       system 'clear'
-      iot_puts ''
       justify(reformat(info))[0].map{|x| iot_puts x}
       @info = 2
     elsif @info == 2
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
       system 'clear'
-      iot_puts ''
       justify(reformat(info))[1].map{|x| iot_puts x}
       @info = -1
     else
