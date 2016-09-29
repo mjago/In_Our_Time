@@ -1,4 +1,3 @@
-require 'nokogiri'
 require 'rss'
 require 'open-uri'
 require 'net/http'
@@ -6,6 +5,7 @@ require 'open-uri'
 require 'yaml'
 require 'fileutils'
 require 'colorize'
+require 'oga'
 
 class InOurTime
 
@@ -247,19 +247,17 @@ class InOurTime
 
   def parse_rss
     rss_files.each do |file|
-      @doc = Nokogiri::XML(File.open(file))
-      titles    = @doc.xpath("//item//title")
-      descs     = @doc.xpath("//item//description")
-      subtitles = @doc.xpath("//item//itunes:subtitle")
-      summarys  = @doc.xpath("//item//itunes:summary")
-      durations = @doc.xpath("//item//itunes:duration")
-      dates     = @doc.xpath("//item//pubDate")
-      links     = @doc.xpath("//item//link")
+      @doc = Oga.parse_xml(File.open(file))
+      titles    = @doc.xpath('rss/channel/item/title')
+      subtitles = @doc.xpath('rss/channel/item/itunes:subtitle')
+      summarys  = @doc.xpath('rss/channel/item/itunes:summary')
+      durations = @doc.xpath('rss/channel/item/itunes:duration')
+      dates     = @doc.xpath('rss/channel/item/pubDate')
+      links     = @doc.xpath('rss/channel/item/link')
 
       0.upto (titles.length - 1) do |idx|
         program = {}
         program[:title] = titles[idx].text
-        #    program[:description] = descs[idx]
         program[:subtitle] = subtitles[idx].text
         program[:summary]  = summarys[idx].text
         program[:duration] = durations[idx].text
