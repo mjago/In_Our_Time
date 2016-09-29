@@ -2,10 +2,12 @@
 lib = File.expand_path('../lib', __FILE__)
 $LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
 
+
+
 Gem::Specification.new do |spec|
   spec.name        = 'in_our_time'
   spec.version     = File.read('VERSION')
-  spec.date        = '2016-09-28'
+  spec.date        = Date.parse(Time.now.to_s).to_s
   spec.authors     = ["Martyn Jago"]
   spec.email       = ["martyn.jago@btinternet.com"]
   spec.description = "In Our Time Player"

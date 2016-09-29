@@ -323,7 +323,7 @@ class InOurTime
         case res
         when Net::HTTPFound
           iot_puts 'redirecting...', @system_colour
-          @doc = Nokogiri::XML(res.body)
+          @doc = Oga.parse_xml(res.body)
           redirect = @doc.css("body p a").text
           break if download_audio(prg, redirect)
           sleep 2
@@ -451,7 +451,7 @@ class InOurTime
      'Producer','Contributors'].map do | x|
       [' ', ':'].map do |y|
         [x, x.upcase].map do |z|
-          info = info.gsub(z + y, "\n" + z + y)
+          info.gsub!(z + y, "\n" + z + y)
         end
       end
     end
