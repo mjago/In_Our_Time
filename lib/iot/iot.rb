@@ -282,8 +282,7 @@ class InOurTime
   def sort_titles
     @sorted_titles = []
     @sorted_titles = @programs.collect { |pr| pr[:title] }
-#    @sorted_titles = @sorted_titles.uniq{|x| x.downcase}
-    @sorted_titles = @sorted_titles.sort unless @config[:sort] == :age
+    @sorted_titles.sort! unless @config[:sort] == :age
   end
 
   def date
@@ -348,14 +347,13 @@ class InOurTime
   end
 
   def print_playing_maybe
-    iot_puts ''
     if @playing
-      iot_puts "Playing '#{@playing}'", @selection_colour
+      iot_puts "\nPlaying '#{@playing}'", @selection_colour
     elsif @started.nil?
       @started = true
-      iot_puts "? or h for instructions", @text_colour
+      iot_puts "\n? or h for instructions", @text_colour
     else
-      iot_puts ''
+      iot_puts "\n"
     end
   end
 
@@ -449,32 +447,47 @@ class InOurTime
   end
 
   def reformat info
-    info.gsub('With ', "\nWith ")
-      .gsub('With: ', "\nWith: ")
-      .gsub('Producer', "- Producer")
+    ['With','Guests',
+     'Producer','Contributors'].map do | x|
+      [' ', ':'].map do |y|
+        [x, x.upcase].map do |z|
+          info = info.gsub(z + y, "\n" + z + y)
+        end
+      end
+    end
+    info
+  end
+
+  def top_space info
+    info.length - info.lstrip.length
+  end
+
+  def bottom_space? bottom
+    bottom == ' '
+  end
+
+  def last_line? info, top
+    info[top..-1].length < @config[:page_width]
   end
 
   def justify info
     pages = [[],[]]
     page, top, bottom = 0, 0, @config[:page_width]
     loop do
-      if(bottom >= info.length)
-        pages[page] << info[top..-1].strip
-        break
-      end
-      loop do
-        break unless info[top] == ' '
-        top += 1 ; bottom += 1
-      end
+      shift = top_space info[top..bottom]
+      top, bottom = top + shift, bottom + shift
       loop do
         if idx = info[top..bottom].index("\n")
           pages[page] << info[top..top + idx]
           page,bottom,top = 1,top + idx + @config[:page_width] + 1, top + idx + 1
-          next
         else
-          break if (info[bottom] == ' ')
+          break if bottom_space? info[bottom]
           bottom -= 1
         end
+      end
+      if last_line? info, top
+        pages[page] << info[top..-1].strip
+        break
       end
       pages[page] << info[top..bottom]
       bottom, top = bottom + @config[:page_width], bottom
@@ -487,8 +500,7 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       system 'clear'
       justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
-      iot_puts ''
-      iot_puts "Date Broadcast: #{prg[:date]}"
+      iot_puts "\nDate Broadcast: #{prg[:date]}"
       iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
       iot_puts "Availability:   " +
                (prg[:have_locally] ? "Downloaded" : "Requires Download")
@@ -498,7 +510,7 @@ class InOurTime
       info = prg[:summary].gsub(/\s+/, ' ')
       system 'clear'
       justify(reformat(info))[0].map{|x| iot_puts x}
-      @info = 2
+      @info = justify(reformat(info))[1] == [] ? -1 : 2
     elsif @info == 2
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
