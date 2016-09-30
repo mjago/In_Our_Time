@@ -505,12 +505,24 @@ class InOurTime
       iot_puts "Availability:   " +
                (prg[:have_locally] ? "Downloaded" : "Requires Download")
       @info = 1
+      @page_count = 1
     elsif @info == 1
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
       system 'clear'
-      justify(reformat(info))[0].map{|x| iot_puts x}
-      @info = justify(reformat(info))[1] == [] ? -1 : 2
+      count = 1
+      justify(reformat(info))[0].each do |x|
+        if (count > (@page_count - 1) * @config[:page_height]) &&
+           (count <= @page_count * @config[:page_height])
+          iot_puts x
+        end
+        count += 1
+      end
+      if count <= @page_count * @config[:page_height] + 1
+        @info = justify(reformat(info))[1] == [] ? -1 : 2
+      else
+        @page_count += 1
+      end
     elsif @info == 2
       prg = select_program @sorted_titles[@selected]
       info = prg[:summary].gsub(/\s+/, ' ')
