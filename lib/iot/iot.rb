@@ -20,7 +20,7 @@ class InOurTime
 
   class KeyboardEvents
 
-    @arrow = 0
+    @mode = :normal
 
     def reset
       $stdin.flush
@@ -34,25 +34,25 @@ class InOurTime
         system("stty -raw echo")
       end
 
-      case @arrow
-      when 1
+      case @mode
+      when :escape
         if str == "["
-          @arrow = 2
+          @mode = :escape_2
         else
-          @arrow = 0
+          @mode = :normal
         end
 
-      when 2
+      when :escape_2
         return :previous     if str == "A"
         return :next         if str == "B"
         return :page_forward if str == "C"
         return :previous     if str == "D"
-        @arrow = 0
+        @mode = :normal
       end
 
       case str
       when "\e"
-        @arrow = 1
+        @mode = :escape
       when "l",'L'
         :list
       when ' '
@@ -364,7 +364,6 @@ class InOurTime
       end
     end
     @no_play = nil
-    else
   end
 
   def print_playing_maybe
