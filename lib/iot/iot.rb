@@ -208,7 +208,7 @@ class InOurTime
       end
       program[:have_locally] = true
     else
-      iot_puts 'audio download failed. Retrying...', @system_colour
+      iot_puts 'Download failed. Retrying...', @system_colour
     end
   end
 
@@ -226,7 +226,7 @@ class InOurTime
 
   def check_remote
     if update_remote?
-      iot_print "checking rss feeds ", @system_colour
+      iot_print "Checking rss feeds ", @system_colour
       local_rss.length.times do |count|
         iot_print '.', @system_colour
         fetch_uri rss_addresses[count], rss_files[count]
@@ -240,7 +240,7 @@ class InOurTime
   def uniquify_programs
     @programs = @programs.uniq{|pr| pr[:title]}
     unless @programs.uniq.length == @programs.length
-      iot_puts "Error ensuring Programs unique!", :red
+      print_error_and_delay "Error ensuring Programs unique!"
       exit 1
     end
   end
@@ -344,22 +344,18 @@ class InOurTime
           break if download_audio(prg, redirect)
           sleep 2
         else
-          iot_puts 'Error! Failed to be redirected!', :red
+          print_error_and_delay 'Error! Failed to be redirected!'
           @no_play = true
-          sleep 2
           break
         end
         retries += 1
       end
       if retries >= 10
-        iot_puts "Max retries downloading #{prg[:title]}", :red
-        sleep 2
+        print_error_and_delay "Max retries downloading #{prg[:title]}"
         @no_play = true
       end
     end
-    if @no_play
-      @no_play = nil
-    else
+    unless @no_play
       @play = Thread.new do
         @playing = prg[:title]
         system player_cmd + ' ' +
@@ -367,6 +363,8 @@ class InOurTime
         @playing, @no_play  = nil, nil
       end
     end
+    @no_play = nil
+    else
   end
 
   def print_playing_maybe
