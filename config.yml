@@ -1,0 +1,30 @@
+---
+:last_update: 1474712963
+:update_interval: 604800
+:colour: true
+:mpg_player: :afplay
+:sort: :age
+:show_count: true
+:page_height: 20
+:page_width: 80
+:colour_theme: :light_theme
+:light_theme:
+  :selection_colour:
+    :colour: :magenta
+    :background: :light_white
+  :count_sel_colour:
+    :colour: :cyan
+    :background: :light_white
+  :count_colour: :yellow
+  :text_colour: :default
+  :system_colour: :yellow
+:dark_theme:
+  :selection_colour:
+    :colour: :light_yellow
+    :background: :light_black
+  :count_sel_colour:
+    :colur: :blue
+    :background: :yellow
+  :count_colour: :yellow
+  :text_colour: :default
+  :system_colour: :yellow
