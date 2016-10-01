@@ -385,7 +385,7 @@ class InOurTime
           iot_print "> " if(idx == @selected) unless @config[:colour]
           show_count_maybe idx
           iot_puts @sorted_titles[idx], @selection_colour if (idx == @selected)
-          iot_puts @sorted_titles[idx], @text_colour         unless(idx == @selected)
+          iot_puts @sorted_titles[idx], @text_colour   unless(idx == @selected)
         end
       end
     else
@@ -495,40 +495,57 @@ class InOurTime
     pages
   end
 
+  def print_subtitle prg
+    system 'clear'
+    justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
+    print_program_details prg
+    @info = 1
+    @page_count = 1
+  end
+
+  def print_program_details prg
+    iot_puts "\nDate Broadcast: #{prg[:date]}"
+    iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
+    iot_puts "Availability:   " +
+             (prg[:have_locally] ? "Downloaded" : "Requires Download")
+  end
+
+  def print_info prg
+    info = prg[:summary].gsub(/\s+/, ' ')
+    system 'clear'
+    count = 1
+    justify(reformat(info))[0].each do |x|
+      if (count > (@page_count - 1) * @config[:page_height]) &&
+         (count <= @page_count * @config[:page_height])
+        iot_puts x
+      end
+      count += 1
+    end
+    if count <= @page_count * @config[:page_height] + 1
+      @info = justify(reformat(info))[1] == [] ? -1 : 2
+    else
+      @page_count += 1
+    end
+  end
+
+  def print_guests prg
+    info = prg[:summary].gsub(/\s+/, ' ')
+    system 'clear'
+    justify(reformat(info))[1].map{|x| iot_puts x}
+    @info = -1
+  end
+
   def info
-    if @info.nil?
+    case @info
+    when nil
       prg = select_program @sorted_titles[@selected]
-      system 'clear'
-      justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
-      iot_puts "\nDate Broadcast: #{prg[:date]}"
-      iot_puts "Duration:       #{prg[:duration].to_i/60} mins"
-      iot_puts "Availability:   " +
-               (prg[:have_locally] ? "Downloaded" : "Requires Download")
-      @info = 1
-      @page_count = 1
-    elsif @info == 1
+      print_subtitle prg
+    when 1
       prg = select_program @sorted_titles[@selected]
-      info = prg[:summary].gsub(/\s+/, ' ')
-      system 'clear'
-      count = 1
-      justify(reformat(info))[0].each do |x|
-        if (count > (@page_count - 1) * @config[:page_height]) &&
-           (count <= @page_count * @config[:page_height])
-          iot_puts x
-        end
-        count += 1
-      end
-      if count <= @page_count * @config[:page_height] + 1
-        @info = justify(reformat(info))[1] == [] ? -1 : 2
-      else
-        @page_count += 1
-      end
-    elsif @info == 2
+      print_info prg
+    when 2
       prg = select_program @sorted_titles[@selected]
-      info = prg[:summary].gsub(/\s+/, ' ')
-      system 'clear'
-      justify(reformat(info))[1].map{|x| iot_puts x}
-      @info = -1
+      print_guests prg
     else
       display_list :same_page
       @info = nil
