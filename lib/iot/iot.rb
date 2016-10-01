@@ -10,8 +10,12 @@ require 'oga'
 class InOurTime
 
   ROOT            = File.expand_path '~/'
-  IN_OUR_TIME     = File.join ROOT, '.in_our_time'
-  CONFIG          = File.join IN_OUR_TIME, 'config.yml'
+  HERE            = File.dirname(__FILE__)
+  CONFIG_DIR      = '.in_our_time'
+  CONFIG_NAME     = 'config.yml'
+  IN_OUR_TIME     = File.join ROOT, CONFIG_DIR
+  DEFAULT_CONFIG  = File.join HERE, '..','..',CONFIG_NAME
+  CONFIG          = File.join IN_OUR_TIME,CONFIG_NAME
   UPDATE_INTERVAL = 604800
   AUDIO_DIRECTORY = 'audio'
   RSS_DIRECTORY   = 'rss'
@@ -117,38 +121,12 @@ class InOurTime
     now - @config[:update_interval] > @config[:last_update]
   end
 
-  def new_config
-    {:last_update => now - UPDATE_INTERVAL - 1,
-     :update_interval => UPDATE_INTERVAL,
-     :colour => true,
-     :mpg_player => :afplay,
-     :sort => :age,
-     :show_count => true,
-     :page_height => PAGE_HEIGHT,
-     :page_width  => PAGE_WIDTH,
-     :colour_theme => :light_theme,
-     :light_theme => {
-       :selection_colour =>  {:colour => :magenta, :background => :light_white},
-       :count_sel_colour =>  {:colour => :cyan, :background => :light_white},
-       :count_colour => :yellow,
-       :text_colour => :default,
-       :system_colour => :yellow
-     },
-     :dark_theme => {
-       :selection_colour => {:colour => :light_yellow, :background => :light_black},
-       :count_sel_colour => {:colur => :blue, :background => :yellow},
-       :count_colour => :yellow,
-       :text_colour => :default,
-       :system_colour => :yellow
-     }
-    }
+  def create_config
+    @config = YAML::load_file(DEFAULT_CONFIG)
+    save_config
   end
 
-  def load_config
-    unless File.exist? CONFIG
-      save_config new_config
-    end
-    @config = YAML::load_file(CONFIG)
+  def do_configs
     @line_count = @config[:page_height]
     theme = @config[:colour_theme]
     @selection_colour = @config[theme][:selection_colour]
@@ -158,8 +136,14 @@ class InOurTime
     @system_colour    = @config[theme][:system_colour]
   end
 
-  def save_config cfg = @config
-    File.open(CONFIG, 'w') { |f| f.write cfg.to_yaml}
+  def load_config
+    create_config unless File.exist? CONFIG
+    @config = YAML::load_file(CONFIG)
+    do_configs
+  end
+
+  def save_config
+    File.open(CONFIG, 'w') { |f| f.write @config.to_yaml}
   end
 
   def rss_addresses
@@ -456,7 +440,7 @@ class InOurTime
       iot_puts "  TL;DR                          "
       iot_puts "Select: up/down arrows           "
       iot_puts "Play:   enter                    "
-      iot_puts "Config: ~/.in_our_time/config.yml"
+      iot_puts "Config: #{CONFIG}                "
       18.upto(@config[:page_height] - 1) {iot_puts ''}
       print_playing_maybe
       @help = true
