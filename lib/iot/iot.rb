@@ -317,9 +317,17 @@ class InOurTime
   def run_program prg
     unless prg[:have_locally]
       retries = 0
-      iot_puts "fetching #{prg[:title]}", @system_colour
+      system 'clear'
+      iot_puts "Fetching #{prg[:title]}", @system_colour
       10.times do
-        res = Net::HTTP.get_response(URI.parse(prg[:link]))
+        begin
+          res = Net::HTTP.get_response(URI.parse(prg[:link]))
+        rescue SocketError => e
+          iot_puts("Failed to connect to Internet! (#{e.class})", :red)
+          @no_play = true
+          sleep 2
+          break
+        end
         case res
         when Net::HTTPFound
           iot_puts 'redirecting...', @system_colour
@@ -328,21 +336,28 @@ class InOurTime
           break if download_audio(prg, redirect)
           sleep 2
         else
-          iot_puts 'Error! Expected to be redirected!', :red
-          exit 1
+          iot_puts 'Error! Failed to be redirected!', :red
+          @no_play = true
+          sleep 2
+          break
         end
         retries += 1
       end
       if retries >= 10
         iot_puts "Max retries downloading #{prg[:title]}", :red
-        exit 1
+        sleep 2
+        @no_play = true
       end
     end
-    @play = Thread.new do
-      @playing = prg[:title]
-      system player_cmd + ' ' +
-             filename_from_title(@playing)
-      @playing = nil
+    if @no_play
+      @no_play = nil
+    else
+      @play = Thread.new do
+        @playing = prg[:title]
+        system player_cmd + ' ' +
+               filename_from_title(@playing)
+        @playing, @no_play  = nil, nil
+      end
     end
   end
 
