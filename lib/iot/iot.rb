@@ -314,18 +314,26 @@ class InOurTime
       end
   end
 
+  def clear
+    system 'clear' or system 'cls'
+  end
+
+  def print_error_and_delay message
+    iot_puts message, :red
+    sleep 2
+  end
+
   def run_program prg
     unless prg[:have_locally]
       retries = 0
-      system 'clear'
+      clear
       iot_puts "Fetching #{prg[:title]}", @system_colour
       10.times do
         begin
           res = Net::HTTP.get_response(URI.parse(prg[:link]))
         rescue SocketError => e
-          iot_puts("Failed to connect to Internet! (#{e.class})", :red)
+          print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
           @no_play = true
-          sleep 2
           break
         end
         case res
@@ -416,7 +424,7 @@ class InOurTime
   end
 
   def display_list action
-    system 'clear'
+    clear
     case action
     when :draw_page
       draw_page
@@ -436,7 +444,7 @@ class InOurTime
 
   def help
     unless @help
-      system 'clear'
+      clear
       iot_puts " In Our Time Player (Help)       "
       iot_puts "                                 "
       iot_puts " Next      - N (down arrow)      "
@@ -511,7 +519,7 @@ class InOurTime
   end
 
   def print_subtitle prg
-    system 'clear'
+    clear
     justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
     print_program_details prg
     @info = 1
@@ -527,7 +535,7 @@ class InOurTime
 
   def print_info prg
     info = prg[:summary].gsub(/\s+/, ' ')
-    system 'clear'
+    clear
     count = 1
     justify(reformat(info))[0].each do |x|
       if (count > (@page_count - 1) * @config[:page_height]) &&
@@ -545,7 +553,7 @@ class InOurTime
 
   def print_guests prg
     info = prg[:summary].gsub(/\s+/, ' ')
-    system 'clear'
+    clear
     justify(reformat(info))[1].map{|x| iot_puts x}
     @info = -1
   end
