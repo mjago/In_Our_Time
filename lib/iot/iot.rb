@@ -158,6 +158,7 @@ class InOurTime
     @count_colour     = @config[theme][:count_colour]
     @text_colour      = @config[theme][:text_colour]
     @system_colour    = @config[theme][:system_colour]
+    @sort             = @config[:sort]
   end
 
   def load_config
@@ -287,10 +288,44 @@ class InOurTime
     nil
   end
 
+  def select_program title
+    @programs.each do |pr|
+      if pr[:title].strip == title.strip
+        return pr
+      end
+    end
+    nil
+  end
+
   def sort_titles
     @sorted_titles = []
     @sorted_titles = @programs.collect { |pr| pr[:title] }
-    @sorted_titles.sort! unless @config[:sort] == :age
+    @sorted_titles.sort! unless @sort == :age
+  end
+
+  def sort_selected title
+    @sorted_titles.each_with_index do |st, idx|
+      if st == title
+        selected = idx
+        idx += 1
+        while idx % @config[:page_height] != 0
+          idx += 1
+        end
+        return selected, idx
+      end
+    end
+  end
+
+  def sort
+    title = @sorted_titles[@selected]
+    @sort = @sort == :age ? :alphabet : :age
+    sort_titles
+    @selected, @line_count = sort_selected(title)
+    redraw
+  end
+
+  def redraw
+    display_list :same_page
   end
 
   def date
@@ -375,7 +410,7 @@ class InOurTime
   def reset
     @pid, @playing, @paused = nil, nil, nil
     window_title
-    display_list :same_page
+    redraw
   end
 
   def write_player str
@@ -390,7 +425,7 @@ class InOurTime
     if control_play?
       @paused  = @paused ? false : true
       write_player " "
-      display_list :same_page
+      redraw
     end
   end
 
@@ -521,7 +556,7 @@ class InOurTime
       print_playing_maybe
       @help = true
     else
-      display_list :same_page
+      redraw
       @help = nil
     end
   end
@@ -627,14 +662,14 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       print_guests prg
     else
-      display_list :same_page
+      redraw
       @info = nil
     end
   end
 
   def run
     action = :unknown
-    display_list :same_page
+    redraw
     key = KeyboardEvents.new
     loop do
       unless action == :unknown
@@ -696,7 +731,9 @@ class InOurTime
           run_program pr
           display_list :same_page
         when :stop
-          kill_audio
+          puts ':stop'
+          sort
+#          kill_audio
         when :info
           info
         when :help
