@@ -15,6 +15,7 @@ class InOurTime
   CONFIG_DIR      = '.in_our_time'
   CONFIG_NAME     = 'config.yml'
   IN_OUR_TIME     = File.join ROOT, CONFIG_DIR
+  VERSION         = File.join HERE, '..','..','VERSION'
   DEFAULT_CONFIG  = File.join HERE, '..','..',CONFIG_NAME
   CONFIG          = File.join IN_OUR_TIME,CONFIG_NAME
   UPDATE_INTERVAL = 604800
@@ -88,10 +89,18 @@ class InOurTime
     @programs, @selected = [], 0
     setup
     load_config
+    load_version
+    load_help_maybe
+    display_version
     check_remote
     parse_rss
     sort_titles
+    version_display_wait
     run
+  end
+
+  def version_display_wait
+    sleep 0.01 while Time.now - @start_time < 1
   end
 
   def iot_print x, col = @text_colour
@@ -109,6 +118,7 @@ class InOurTime
   end
 
   def setup
+    @start_time = Time.now
     iot = IN_OUR_TIME
     audio = File.join iot, AUDIO_DIRECTORY
     pages = File.join iot, RSS_DIRECTORY
@@ -118,6 +128,17 @@ class InOurTime
       Dir.mkdir pages
       local_rss.map{|f| FileUtils.touch(File.join pages, f)}
     end
+  end
+
+  def display_version
+    clear
+    iot_print("Loading ", @system_colour) unless ARGV[0] == '-v' || ARGV[0] == '--version'
+    iot_puts "In Our Time Player (#{@version})", @system_colour
+    exit 0 if ARGV[0] == '-v' || ARGV[0] == '--version'
+  end
+
+  def load_version
+    File.open(VERSION) {|f| @version = f.readline.strip}
   end
 
   def update_remote?
@@ -471,25 +492,32 @@ class InOurTime
     end
   end
 
+  def load_help_maybe
+    if ARGV[0] == '-h' || ARGV[0] == '--help' || ARGV[0] == '-?'
+      help
+      exit 0
+    end
+  end
+
   def help
     unless @help
       clear
-      iot_puts " In Our Time Player (Help)       "
-      iot_puts "                                 "
-      iot_puts " Next      - N (down arrow)      "
-      iot_puts " Previous  - P (up arrow)        "
-      iot_puts " Next Page -    (SPACE)          "
-      iot_puts " Play      - X (return)          "
-      iot_puts " Stop      - S                   "
-      iot_puts " List      - L                   "
-      iot_puts " Info      - I                   "
-      iot_puts " Help      - H                   "
-      iot_puts " Quit      - Q                   "
-      iot_puts "  TL;DR                          "
-      iot_puts "Select: up/down arrows           "
-      iot_puts "Play:   enter                    "
-      iot_puts "Config: #{CONFIG}                "
-      18.upto(@config[:page_height] - 1) {iot_puts ''}
+      iot_puts " In Our Time Player (#{@version})"
+      iot_puts " Next        - N or Down Key ", @system_colour
+      iot_puts " Previous    - P or Up Key   ", @system_colour
+      iot_puts " Next Page   - SPACE         ", @system_colour
+      iot_puts " Play        - X or Enter    ", @system_colour
+      iot_puts " Stop        - S             ", @system_colour
+      iot_puts " List Page 1 - L             ", @system_colour
+      iot_puts " Info        - I             ", @system_colour
+      iot_puts " Help        - H             ", @system_colour
+      iot_puts " Quit        - Q             ", @system_colour
+      iot_puts " mpg123 Controls:            ", @system_colour
+      iot_puts "    Pause/Resume - P         ", @system_colour
+      iot_puts "    Forward Skip - F         ", @system_colour
+      iot_puts "    Reverse Skip - R         ", @system_colour
+      iot_puts "                             ", @system_colour
+      iot_puts "Config: #{CONFIG}"            , @system_colour
       print_playing_maybe
       @help = true
     else

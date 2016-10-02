@@ -6,7 +6,7 @@ Select, automatically download, and play **BBC In Our Time** podcasts easily, fr
 
 Podcast is archived locally for offline access in the future.
 
-Regular checks for new podcasts.
+Regularly checks for new podcasts.
 
 ![compile image](https://raw.githubusercontent.com/mjago/In_Our_Time/master/light_theme.png)
 
@@ -28,4 +28,14 @@ By default uses **afplay** as the media player but gains **Forward skip**, **Rev
 
 ```sh
 :mpg_player: :mpg123
+```
+
+## Command line options:
+Version:
+```sh
+iot --version
+```
+Help:
+```sh
+iot --help
 ```
