@@ -1,10 +1,12 @@
 ## In Our Time
 
-Select, auto-download, and play **BBC In Our Time** podcasts easily, from the command line [link](http://www.bbc.co.uk/programmes/b006qykl).
+Select, automatically download, and play **BBC In Our Time** podcasts easily, from the command line.
 
-When played, podcast is archived locally for offline access in the future.
+- [BBC In Our Time](http://www.bbc.co.uk/programmes/b006qykl).
 
-Checks regularly for new podcasts and adds to the list.
+Podcast is archived locally for offline access in the future.
+
+Regular checks for new podcasts.
 
 ![compile image](https://raw.githubusercontent.com/mjago/In_Our_Time/master/light_theme.png)
 
@@ -16,12 +18,14 @@ Checks regularly for new podcasts and adds to the list.
 gem install in_our_time
 iot
 ```
-
 ## Config:
 
 Config can be found at '~/.in_our_time/config.yml'
 
 ## mp3 player:
 
-By default uses **afplay** on **OSX** but can also be configured to use **mpg123**. Use **aplay** on **Linux**.
+By default uses **afplay** as the media player but gains **Forward skip**, **Reverse Skip**, **Pause** and **Resume** controls when used with - [mpg123](https://www.mpg123.de/). Install **mpg123** and modify the config.yml file to use **mpg123**:
 
+```sh
+:mpg_player: :mpg123
+```
