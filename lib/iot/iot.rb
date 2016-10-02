@@ -6,6 +6,7 @@ require 'yaml'
 require 'fileutils'
 require 'colorize'
 require 'oga'
+require 'pty'
 
 class InOurTime
 
@@ -64,9 +65,11 @@ class InOurTime
       when "q",'Q', "\u0003", "\u0004"
         :quit
       when 'p', 'P'
-        :previous
-      when 'n', 'N'
-        :next
+        :pause
+      when 'f', 'F'
+        :forward
+      when 'r', 'R'
+        :rewind
       when 's', 'S'
         :stop
       when 'x', 'X', "\r"
@@ -276,26 +279,21 @@ class InOurTime
   def pre_delay
     x = DateTime.strptime("Mon, 20 Jun 2016", '%a, %d %b %Y')
     y = DateTime.strptime(date, '%a, %d %b %Y')
-    y < x ? '410' : '435'
+    if y < x
+      return '410' unless @playing == 'Abelard and Heloise'
+      '0' if @playing == 'Abelard and Heloise'
+    else
+      '435'
+    end
   end
 
   def player_cmd
     case @config[:mpg_player]
     when :mpg123
-      "mpg123 -qk#{pre_delay}"
+      "mpg123 --remote-err -Cqk#{pre_delay}"
     else
       "afplay"
     end
-  end
-
-  def kill_cmd
-    "killall " +
-      case @config[:mpg_player]
-      when :mpg123
-        "mpg123"
-      else
-        "afplay"
-      end
   end
 
   def clear
@@ -340,19 +338,62 @@ class InOurTime
       end
     end
     unless @no_play
-      @play = Thread.new do
-        @playing = prg[:title]
-        system player_cmd + ' ' +
-               filename_from_title(@playing)
-        @playing, @no_play  = nil, nil
-      end
+      @playing = prg[:title]
+      window_title prg[:title]
+      @cmd = player_cmd + ' ' + filename_from_title(@playing)
+      @messages = []
+      @p_out, @p_in, @pid = PTY.spawn(@cmd)
     end
     @no_play = nil
   end
 
+  def window_title title = ''
+    puts "\"\033]0;#{title}\007"
+  end
+
+  def reset
+    @pid, @playing, @paused = nil, nil, nil
+    window_title
+    display_list :same_page
+  end
+
+  def write_player str
+    begin
+      @p_in.puts str
+    rescue Errno::EIO
+      reset
+    end
+  end
+
+  def pause
+    if control_play?
+      @paused  = @paused ? false : true
+      write_player " "
+      display_list :same_page
+    end
+  end
+
+  def control_play?
+    if @config[:mpg_player] == :mpg123
+      if @playing
+        true
+      end
+    end
+  end
+
+  def forward
+     write_player ":" if control_play?
+  end
+
+  def rewind
+     write_player ";" if control_play?
+  end
+
   def print_playing_maybe
     if @playing
-      iot_puts "\nPlaying '#{@playing}'", @selection_colour
+      iot_print("\nPlaying: ", @count_colour) unless @paused
+      iot_print("\nPaused: ", @count_colour) if @paused
+      iot_puts @playing, @selection_colour
     elsif @started.nil?
       @started = true
       iot_puts "\n? or h for instructions", @text_colour
@@ -361,11 +402,18 @@ class InOurTime
     end
   end
 
+  def kill_cmd
+    "killall " +
+      @config[:mpg_player].to_s
+  end
+
   def kill_audio
     if @playing
-      system kill_cmd if @play
-      @play.kill if @play
-      @playing = nil
+      if @pid.is_a? Fixnum
+        Process.kill('QUIT', @pid)
+        sleep 0.2
+        reset
+      end
     end
   end
 
@@ -407,7 +455,7 @@ class InOurTime
   def display_list action
     clear
     case action
-    when :draw_page
+    when :next_page
       draw_page
     when :previous_page
       if @line_count > 0
@@ -566,18 +614,38 @@ class InOurTime
       end
 
       ip = key.input
+
+      if @pid.is_a? Fixnum
+        begin
+          write_player( "\e")
+          if @pid.is_a? Fixnum
+            Process.kill 0, @pid
+          end
+        rescue Errno::ESRCH
+          reset
+        end
+      else
+        @pid = nil
+      end
+
       @info = nil unless ip == :info
       @help = nil unless ip == :help
 
       action =
         case ip
+        when :pause
+          pause
+        when :forward
+          forward
+        when :rewind
+          rewind
         when :list
           @line_count = 0
           @selected = 0
-          display_list :draw_page
+          display_list :next_page
         when :page_forward
           @selected = @line_count
-          display_list :draw_page
+          display_list :next_page
         when :previous
           @selected -= 1 if @selected > 0
           if @selected >= @line_count -
@@ -591,7 +659,7 @@ class InOurTime
           if @selected <= @line_count - 1
             display_list :same_page
           else
-            display_list :draw_page
+            display_list :next_page
           end
         when :play
           kill_audio
