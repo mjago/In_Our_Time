@@ -51,13 +51,10 @@ class InOurTime
       loop do
         str = ''
         loop do
-
           str = STDIN.getch
-
           if str == "\e"
             @mode = :escape
           else
-
             case @mode
             when :escape
               if str == "["
@@ -72,14 +69,12 @@ class InOurTime
               @event = :previous      if str == "D"
               @mode = :normal
 
-            when :normal
+            else
               break if @event == :no_event
             end
           end
-
           ke_events
         end
-
 
         case str
         when "\e"
@@ -97,7 +92,7 @@ class InOurTime
         when 'r', 'R'
           @event = :rewind
         when 's', 'S'
-          @event = :stop
+          @event = :sort
         when 'x', 'X', "\r"
           @event = :play
         when 'i', 'I'
@@ -146,7 +141,7 @@ class InOurTime
   end
 
   def do_events
-    sleep 0.001
+    sleep 0.003
   end
 
   def quit code = 0
@@ -159,10 +154,8 @@ class InOurTime
   end
 
   def iot_print x, col = @text_colour
-#    @lock.synchronize do
-      STDOUT.print x.colorize col if @config[:colour]
-      STDOUT.print x          unless @config[:colour]
-#    end
+    STDOUT.print x.colorize col if @config[:colour]
+    STDOUT.print x          unless @config[:colour]
   end
 
   def iot_puts x = '', col = @text_colour
@@ -208,16 +201,19 @@ class InOurTime
   end
 
   def do_configs
-    @line_count = @config[:page_height]
     theme = @config[:colour_theme]
     @selection_colour = @config[theme][:selection_colour]
     @count_sel_colour = @config[theme][:count_sel_colour]
     @count_colour     = @config[theme][:count_colour]
     @text_colour      = @config[theme][:text_colour]
     @system_colour    = @config[theme][:system_colour]
-    rows, columns = $stdout.winsize
-    @config[:page_height] = (rows - 4) if @config[:page_height] == :auto
-    @config[:page_width]  = (rows - 4) if @config[:page_width]  == :auto
+    rows, cols = $stdout.winsize
+    while(rows % 10 != 0) ; rows -=1 ; end
+    while(cols % 10 != 0) ; cols -=1 ; end
+    @config[:page_height] = rows if @config[:page_height] == :auto
+    @config[:page_width]  = cols if @config[:page_width]  == :auto
+    @line_count = @config[:page_height]
+    @sort = @config[:sort]
   end
 
   def load_config
@@ -350,7 +346,32 @@ class InOurTime
   def sort_titles
     @sorted_titles = []
     @sorted_titles = @programs.collect { |pr| pr[:title] }
-    @sorted_titles.sort! unless @config[:sort] == :age
+    @sorted_titles.sort! unless @sort == :age
+  end
+
+  def sort_selected title
+    @sorted_titles.each_with_index do |st, idx|
+      if st == title
+        selected = idx
+        idx += 1
+        while idx % @config[:page_height] != 0
+          idx += 1
+        end
+        return selected, idx
+      end
+    end
+  end
+
+  def sort
+    title = @sorted_titles[@selected]
+    @sort = @sort == :age ? :alphabet : :age
+    sort_titles
+    @selected, @line_count = sort_selected(title)
+    redraw
+  end
+
+  def redraw
+    display_list :same_page
   end
 
   def date
@@ -437,7 +458,7 @@ class InOurTime
   def reset
     @pid, @playing, @paused = nil, nil, nil
     window_title
-    display_list :same_page
+    redraw
   end
 
   def write_player str
@@ -452,16 +473,12 @@ class InOurTime
     if control_play?
       @paused  = @paused ? false : true
       write_player " "
-      display_list :same_page
+      redraw
     end
   end
 
   def control_play?
-    if @config[:mpg_player] == :mpg123
-      if @playing
-        true
-      end
-    end
+    @playing && (@config[:mpg_player] == :mpg123)
   end
 
   def forward
@@ -568,8 +585,8 @@ class InOurTime
       iot_puts " Next        - N or Down Key ", @system_colour
       iot_puts " Previous    - P or Up Key   ", @system_colour
       iot_puts " Next Page   - SPACE         ", @system_colour
-      iot_puts " Play        - X or Enter    ", @system_colour
-      iot_puts " Stop        - S             ", @system_colour
+      iot_puts " Play/Stop   - X or Enter    ", @system_colour
+      iot_puts " Sort        - S             ", @system_colour
       iot_puts " List Page 1 - L             ", @system_colour
       iot_puts " Info        - I             ", @system_colour
       iot_puts " Help        - H             ", @system_colour
@@ -584,7 +601,7 @@ class InOurTime
       print_playing_maybe
       @help = true
     else
-      display_list :same_page
+      redraw
       @help = nil
     end
   end
@@ -690,13 +707,13 @@ class InOurTime
       prg = select_program @sorted_titles[@selected]
       print_guests prg
     else
-      display_list :same_page
+      redraw
       @info = nil
     end
   end
 
   def check_process
-    if @pid.is_a? Fixnum
+    if(@playing && @pid.is_a?(Fixnum))
       begin
         write_player( "\e")
         if @pid.is_a? Fixnum
@@ -724,24 +741,17 @@ class InOurTime
 #    sleep 0.015
 
     action = :unknown
-    display_list :same_page
+    redraw
     loop do
 
       unless action == :unknown
         @key.reset
       end
 
-      count = 0
-
       loop do
         ip = @key.read
         break unless ip == :no_event
-
-        if count >= 1000
-          check_process if @tic.toc
-          count = 0
-        end
-        count += 1
+        check_process if @tic.toc
         do_events
       end
 
@@ -767,25 +777,30 @@ class InOurTime
           @selected -= 1 if @selected > 0
           if @selected >= @line_count -
              @config[:page_height]
-            display_list :same_page
+            redraw
           else
             display_list :previous_page
           end
         when :next
           @selected += 1
           if @selected <= @line_count - 1
-            display_list :same_page
+            redraw
           else
             display_list :next_page
           end
         when :play
-          kill_audio
-          title = @sorted_titles[@selected]
-          pr = select_program title
-          run_program pr
-          display_list :same_page
-        when :stop
-          kill_audio
+          if @playing
+            kill_audio
+            @playing = nil
+          else
+            kill_audio
+            title = @sorted_titles[@selected]
+            pr = select_program title
+            run_program pr
+            redraw
+          end
+        when :sort
+          sort
         when :info
           info
         when :help
