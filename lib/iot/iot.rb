@@ -7,6 +7,7 @@ require 'fileutils'
 require 'colorize'
 require 'oga'
 require 'pty'
+require 'io/console'
 
 class InOurTime
 
@@ -26,67 +27,112 @@ class InOurTime
 
   class KeyboardEvents
 
-    @mode = :normal
-
-    def reset
-      $stdin.flush
+    def initialize
+      @mode = :normal
+      @event = :no_event
     end
 
-    def input
-      begin
-        system("stty raw -echo")
-        str = $stdin.getc
-      ensure
-        system("stty -raw echo")
-      end
+    def reset
+      STDIN.flush
+    end
 
-      case @mode
-      when :escape
-        if str == "["
-          @mode = :escape_2
-        else
-          @mode = :normal
+    def ke_events
+      sleep 0.001
+    end
+
+    def read
+      ret_val = @event
+    #  reset
+      @event = :no_event
+      ret_val
+    end
+
+    def run
+      loop do
+        str = ''
+        loop do
+
+          str = STDIN.getch
+
+          if str == "\e"
+            @mode = :escape
+          else
+
+            case @mode
+            when :escape
+              if str == "["
+                @mode = :escape_2
+              else
+                @mode = :normal
+              end
+            when :escape_2
+              @event =  :previous     if str == "A"
+              @event =  :next         if str == "B"
+              @event = :page_forward  if str == "C"
+              @event = :previous      if str == "D"
+              @mode = :normal
+
+            when :normal
+              break if @event == :no_event
+            end
+          end
+
+          ke_events
         end
 
-      when :escape_2
-        return :previous     if str == "A"
-        return :next         if str == "B"
-        return :page_forward if str == "C"
-        return :previous     if str == "D"
-        @mode = :normal
-      end
 
-      case str
-      when "\e"
-        @mode = :escape
-      when "l",'L'
-        :list
-      when ' '
-        :page_forward
-      when "q",'Q', "\u0003", "\u0004"
-        :quit
-      when 'p', 'P'
-        :pause
-      when 'f', 'F'
-        :forward
-      when 'r', 'R'
-        :rewind
-      when 's', 'S'
-        :stop
-      when 'x', 'X', "\r"
-        :play
-      when 'i', 'I'
-        :info
-      when '?', 'h'
-        :help
-      else
-        :unknown
+        case str
+        when "\e"
+          @mode = :escape
+        when "l",'L'
+          @event = :list
+        when ' '
+          @event = :page_forward
+        when "q",'Q', "\u0003", "\u0004"
+          @event = :quit
+        when 'p', 'P'
+          @event = :pause
+        when 'f', 'F'
+          @event = :forward
+        when 'r', 'R'
+          @event = :rewind
+        when 's', 'S'
+          @event = :stop
+        when 'x', 'X', "\r"
+          @event = :play
+        when 'i', 'I'
+          @event = :info
+        when '?', 'h'
+          @event = :help
+        else
+          @event = :no_event
+        end
+        ke_events
       end
+    end
+  end
+
+  class Tic
+    def initialize
+      @flag = false
+    end
+
+    def run
+      loop do
+        sleep 1
+        @flag = true
+      end
+    end
+
+    def toc
+      ret_val, @flag = @flag, false
+      ret_val
     end
   end
 
   def initialize
     @programs, @selected = [], 0
+    @lock = Mutex.new
     setup
     load_config
     load_version
@@ -99,18 +145,29 @@ class InOurTime
     run
   end
 
+  def do_events
+    sleep 0.001
+  end
+
+  def quit code = 0
+    system("stty -raw echo")
+    exit code
+  end
+
   def version_display_wait
-    sleep 0.01 while Time.now - @start_time < 1
+    do_events while Time.now - @start_time < 1
   end
 
   def iot_print x, col = @text_colour
-    print x.colorize col if @config[:colour]
-    print x          unless @config[:colour]
+#    @lock.synchronize do
+      STDOUT.print x.colorize col if @config[:colour]
+      STDOUT.print x          unless @config[:colour]
+#    end
   end
 
-  def iot_puts x, col = @text_colour
-    puts x.colorize col if @config[:colour]
-    puts x          unless @config[:colour]
+  def iot_puts x = '', col = @text_colour
+    iot_print x, col
+    iot_print "\n\r"
   end
 
   def now
@@ -134,7 +191,7 @@ class InOurTime
     clear
     iot_print("Loading ", @system_colour) unless ARGV[0] == '-v' || ARGV[0] == '--version'
     iot_puts "In Our Time Player (#{@version})", @system_colour
-    exit 0 if ARGV[0] == '-v' || ARGV[0] == '--version'
+    quit if ARGV[0] == '-v' || ARGV[0] == '--version'
   end
 
   def load_version
@@ -158,6 +215,9 @@ class InOurTime
     @count_colour     = @config[theme][:count_colour]
     @text_colour      = @config[theme][:text_colour]
     @system_colour    = @config[theme][:system_colour]
+    rows, columns = $stdout.winsize
+    @config[:page_height] = (rows - 4) if @config[:page_height] == :auto
+    @config[:page_width]  = (rows - 4) if @config[:page_width]  == :auto
   end
 
   def load_config
@@ -239,7 +299,7 @@ class InOurTime
         iot_print '.', @system_colour
         fetch_uri rss_addresses[count], rss_files[count]
       end
-      iot_puts ''
+      iot_puts
       @config[:last_update] = now
       save_config
     end
@@ -249,7 +309,7 @@ class InOurTime
     @programs = @programs.uniq{|pr| pr[:title]}
     unless @programs.uniq.length == @programs.length
       print_error_and_delay "Error ensuring Programs unique!"
-      exit 1
+      quit 1
     end
   end
 
@@ -318,7 +378,9 @@ class InOurTime
   end
 
   def clear
-    system 'clear' or system 'cls'
+    @lock.synchronize do
+      system 'clear' or system 'cls'
+    end
   end
 
   def print_error_and_delay message
@@ -369,7 +431,7 @@ class InOurTime
   end
 
   def window_title title = ''
-    puts "\"\033]0;#{title}\007"
+    STDOUT.puts "\"\033]0;#{title}\007"
   end
 
   def reset
@@ -495,7 +557,7 @@ class InOurTime
   def load_help_maybe
     if ARGV[0] == '-h' || ARGV[0] == '--help' || ARGV[0] == '-?'
       help
-      exit 0
+      quit
     end
   end
 
@@ -512,11 +574,12 @@ class InOurTime
       iot_puts " Info        - I             ", @system_colour
       iot_puts " Help        - H             ", @system_colour
       iot_puts " Quit        - Q             ", @system_colour
+      iot_puts
       iot_puts " mpg123 Controls:            ", @system_colour
       iot_puts "    Pause/Resume - P         ", @system_colour
       iot_puts "    Forward Skip - F         ", @system_colour
       iot_puts "    Reverse Skip - R         ", @system_colour
-      iot_puts "                             ", @system_colour
+      iot_puts
       iot_puts "Config: #{CONFIG}"            , @system_colour
       print_playing_maybe
       @help = true
@@ -632,28 +695,54 @@ class InOurTime
     end
   end
 
+  def check_process
+    if @pid.is_a? Fixnum
+      begin
+        write_player( "\e")
+        if @pid.is_a? Fixnum
+          Process.kill 0, @pid
+        end
+      rescue Errno::ESRCH
+        reset
+      end
+    else
+      @pid = nil
+    end
+  end
+
   def run
+    ip = ''
+    @tic = Tic.new
+    @tic_thread = Thread.new do
+      @tic.run
+    end
+
+    @key = KeyboardEvents.new
+    key_thread = Thread.new do
+      @key.run
+    end
+#    sleep 0.015
+
     action = :unknown
     display_list :same_page
-    key = KeyboardEvents.new
     loop do
+
       unless action == :unknown
-        key.reset
+        @key.reset
       end
 
-      ip = key.input
+      count = 0
 
-      if @pid.is_a? Fixnum
-        begin
-          write_player( "\e")
-          if @pid.is_a? Fixnum
-            Process.kill 0, @pid
-          end
-        rescue Errno::ESRCH
-          reset
+      loop do
+        ip = @key.read
+        break unless ip == :no_event
+
+        if count >= 1000
+          check_process if @tic.toc
+          count = 0
         end
-      else
-        @pid = nil
+        count += 1
+        do_events
       end
 
       @info = nil unless ip == :info
@@ -703,8 +792,9 @@ class InOurTime
           help
         when :quit
           kill_audio
-          exit 0
+          quit
         end
+      do_events
     end
   end
 end
