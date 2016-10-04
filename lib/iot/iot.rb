@@ -210,8 +210,10 @@ class InOurTime
     rows, cols = $stdout.winsize
     while(rows % 10 != 0) ; rows -=1 ; end
     while(cols % 10 != 0) ; cols -=1 ; end
-    @config[:page_height] = rows if @config[:page_height] == :auto
-    @config[:page_width]  = cols if @config[:page_width]  == :auto
+    rows = 10 if rows < 10
+    cols = 20 if cols < 20
+    @config[:page_height] = rows if(@config[:page_height] == :auto)
+    @config[:page_width]  = cols if(@config[:page_width]  == :auto)
     @line_count = @config[:page_height]
     @sort = @config[:sort]
   end
@@ -582,22 +584,22 @@ class InOurTime
     unless @help
       clear
       iot_puts " In Our Time Player (#{@version})"
-      iot_puts " Next        - N or Down Key ", @system_colour
-      iot_puts " Previous    - P or Up Key   ", @system_colour
-      iot_puts " Next Page   - SPACE         ", @system_colour
-      iot_puts " Play/Stop   - X or Enter    ", @system_colour
-      iot_puts " Sort        - S             ", @system_colour
-      iot_puts " List Page 1 - L             ", @system_colour
-      iot_puts " Info        - I             ", @system_colour
-      iot_puts " Help        - H             ", @system_colour
-      iot_puts " Quit        - Q             ", @system_colour
+      iot_puts " Next      - N or Down Key ", @system_colour
+      iot_puts " Previous  - P or Up Key   ", @system_colour
+      iot_puts " Next Page - SPACE         ", @system_colour
+      iot_puts " Play/Stop - X or Enter    ", @system_colour
+      iot_puts " Sort      - S             ", @system_colour
+      iot_puts " List Top  - L             ", @system_colour
+      iot_puts " Info      - I             ", @system_colour
+      iot_puts " Help      - H             ", @system_colour
+      iot_puts " Quit      - Q             ", @system_colour
       iot_puts
-      iot_puts " mpg123 Controls:            ", @system_colour
-      iot_puts "    Pause/Resume - P         ", @system_colour
-      iot_puts "    Forward Skip - F         ", @system_colour
-      iot_puts "    Reverse Skip - R         ", @system_colour
+      iot_puts " mpg123 Controls:          ", @system_colour
+      iot_puts "    Pause/Resume - P       ", @system_colour
+      iot_puts "    Forward Skip - F       ", @system_colour
+      iot_puts "    Reverse Skip - R       ", @system_colour
       iot_puts
-      iot_puts "Config: #{CONFIG}"            , @system_colour
+      iot_puts "Config: #{CONFIG}", @system_colour
       print_playing_maybe
       @help = true
     else
