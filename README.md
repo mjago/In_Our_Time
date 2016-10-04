@@ -1,3 +1,6 @@
+[![Gem Version](https://badge.fury.io/rb/in_our_time.svg)](https://badge.fury.io/rb/in_our_time)
+[![Dependency Status](https://gemnasium.com/badges/github.com/mjago/in_our_time.svg)](https://gemnasium.com/github.com/mjago/in_our_time)
+
 ## In Our Time
 
 Select, automatically download, and play **BBC In Our Time** podcasts easily, from the command line.
