@@ -81,6 +81,8 @@ class InOurTime
           @mode = :escape
         when "l",'L'
           @event = :list
+        when "u",'U'
+          @event = :update
         when ' '
           @event = :page_forward
         when "q",'Q', "\u0003", "\u0004"
@@ -290,16 +292,21 @@ class InOurTime
     local_rss.map{|f| File.join IN_OUR_TIME, RSS_DIRECTORY, f }
   end
 
+  def update
+    clear
+    iot_print "Checking rss feeds ", @system_colour
+    local_rss.length.times do |count|
+      iot_print '.', @system_colour
+      fetch_uri rss_addresses[count], rss_files[count]
+    end
+    iot_puts
+    @config[:last_update] = now
+    save_config
+  end
+
   def check_remote
     if update_remote?
-      iot_print "Checking rss feeds ", @system_colour
-      local_rss.length.times do |count|
-        iot_print '.', @system_colour
-        fetch_uri rss_addresses[count], rss_files[count]
-      end
-      iot_puts
-      @config[:last_update] = now
-      save_config
+      update if update_remote?
     end
   end
 
@@ -590,6 +597,7 @@ class InOurTime
       iot_puts " Play/Stop - X or Enter    ", @system_colour
       iot_puts " Sort      - S             ", @system_colour
       iot_puts " List Top  - L             ", @system_colour
+      iot_puts " Update    - U             ", @system_colour
       iot_puts " Info      - I             ", @system_colour
       iot_puts " Help      - H             ", @system_colour
       iot_puts " Quit      - Q             ", @system_colour
@@ -803,6 +811,13 @@ class InOurTime
           end
         when :sort
           sort
+        when :update
+          update
+          parse_rss
+          sort_titles
+          @line_count = 0
+          @selected = 0
+          display_list :next_page
         when :info
           info
         when :help
