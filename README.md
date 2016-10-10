@@ -10,7 +10,11 @@ Podcast is archived locally for offline access in the future.
 
 Regularly checks for new podcasts.
 
+- Light Theme
+
 ![compile image](https://raw.githubusercontent.com/mjago/In_Our_Time/master/light_theme.png)
+
+- Dark Theme
 
 ![compile image](https://raw.githubusercontent.com/mjago/In_Our_Time/master/dark_theme.png)
 
