@@ -344,11 +344,7 @@ class InOurTime
   end
 
   def select_program title
-    @programs.each do |pr|
-      if pr[:title].strip == title.strip
-        return pr
-      end
-    end
+    @programs.map{|pr| return pr if(pr[:title].strip == title.strip)}
     nil
   end
 

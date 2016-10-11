@@ -30,7 +30,7 @@ Config can be found at '~/.in_our_time/config.yml'
 
 ## mp3 player:
 
-By default uses **afplay** as the media player but gains **Forward skip**, **Reverse Skip**, **Pause** and **Resume** controls when used with - [mpg123](https://www.mpg123.de/). Install **mpg123** and modify the config.yml file to use **mpg123**:
+By default uses **afplay** as the media player but gains **Forward skip**, **Reverse Skip**, **Pause** and **Resume** controls when used with [mpg123](https://www.mpg123.de/). Install **mpg123** and modify the config.yml file to use **mpg123**:
 
 ```sh
 :mpg_player: :mpg123
