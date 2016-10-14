@@ -48,63 +48,65 @@ class InOurTime
     end
 
     def run
-      loop do
-        str = ''
+      Thread.new do
         loop do
-          str = STDIN.getch
-          if str == "\e"
-            @mode = :escape
-          else
-            case @mode
-            when :escape
-              if str == "["
-                @mode = :escape_2
-              else
-                @mode = :normal
-              end
-            when :escape_2
-              @event =  :previous     if str == "A"
-              @event =  :next         if str == "B"
-              @event = :page_forward  if str == "C"
-              @event = :previous      if str == "D"
-              @mode = :normal
-
+          str = ''
+          loop do
+            str = STDIN.getch
+            if str == "\e"
+              @mode = :escape
             else
-              break if @event == :no_event
+              case @mode
+              when :escape
+                if str == "["
+                  @mode = :escape_2
+                else
+                  @mode = :normal
+                end
+              when :escape_2
+                @event =  :previous     if str == "A"
+                @event =  :next         if str == "B"
+                @event = :page_forward  if str == "C"
+                @event = :previous      if str == "D"
+                @mode = :normal
+
+              else
+                break if @event == :no_event
+              end
             end
+            ke_events
+          end
+
+          case str
+          when "\e"
+            @mode = :escape
+          when "l",'L'
+            @event = :list
+          when "u",'U'
+            @event = :update
+          when ' '
+            @event = :page_forward
+          when "q",'Q', "\u0003", "\u0004"
+            @event = :quit
+          when 'p', 'P'
+            @event = :pause
+          when 'f', 'F'
+            @event = :forward
+          when 'r', 'R'
+            @event = :rewind
+          when 's', 'S'
+            @event = :sort
+          when 'x', 'X', "\r"
+            @event = :play
+          when 'i', 'I'
+            @event = :info
+          when '?', 'h'
+            @event = :help
+          else
+            @event = :no_event
           end
           ke_events
         end
-
-        case str
-        when "\e"
-          @mode = :escape
-        when "l",'L'
-          @event = :list
-        when "u",'U'
-          @event = :update
-        when ' '
-          @event = :page_forward
-        when "q",'Q', "\u0003", "\u0004"
-          @event = :quit
-        when 'p', 'P'
-          @event = :pause
-        when 'f', 'F'
-          @event = :forward
-        when 'r', 'R'
-          @event = :rewind
-        when 's', 'S'
-          @event = :sort
-        when 'x', 'X', "\r"
-          @event = :play
-        when 'i', 'I'
-          @event = :info
-        when '?', 'h'
-          @event = :help
-        else
-          @event = :no_event
-        end
-        ke_events
       end
     end
   end
@@ -731,19 +733,11 @@ class InOurTime
   end
 
   def run
-    ip = ''
-    @tic = Tic.new
-    @tic_thread = Thread.new do
-      @tic.run
-    end
+    ip, action = '', :unknown
+    @tic, @key = Tic.new, KeyboardEvents.new
+    @tic.run
+    @key.run
 
-    @key = KeyboardEvents.new
-    key_thread = Thread.new do
-      @key.run
-    end
-#    sleep 0.015
-
-    action = :unknown
     redraw
     loop do
 
