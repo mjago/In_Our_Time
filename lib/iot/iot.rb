@@ -117,9 +117,11 @@ class InOurTime
     end
 
     def run
-      loop do
-        sleep 1
-        @flag = true
+      Thread.new do
+        loop do
+          sleep 1
+          @flag = true
+        end
       end
     end
 
@@ -263,7 +265,7 @@ class InOurTime
 
   def filename_from_title title
     temp = title.gsub(/[^0-9a-z ]/i, '').gsub(' ', '_').strip + '.mp3'
-    File.join(File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase)
+    File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase
   end
 
   def download_audio program, addr
