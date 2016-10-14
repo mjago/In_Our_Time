@@ -285,10 +285,7 @@ class InOurTime
 
   def have_locally? title
     filename = filename_from_title(title)
-    if File.exists?(filename)
-      return true
-    end
-    false
+    File.exists?(filename) ? true : false
   end
 
   def rss_files
@@ -308,9 +305,7 @@ class InOurTime
   end
 
   def check_remote
-    if update_remote?
-      update if update_remote?
-    end
+    update if update_remote?
   end
 
   def uniquify_programs
@@ -759,12 +754,8 @@ class InOurTime
 
       action =
         case ip
-        when :pause
-          pause
-        when :forward
-          forward
-        when :rewind
-          rewind
+        when :pause, :forward, :rewind
+          self.send ip
         when :list
           @line_count = 0
           @selected = 0
