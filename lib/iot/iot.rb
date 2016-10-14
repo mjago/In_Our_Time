@@ -129,7 +129,6 @@ class InOurTime
 
   def initialize
     @programs, @selected = [], 0
-    @lock = Mutex.new
     setup
     load_config
     load_version
@@ -404,9 +403,7 @@ class InOurTime
   end
 
   def clear
-    @lock.synchronize do
-      system 'clear' or system 'cls'
-    end
+    system 'clear' or system 'cls'
   end
 
   def print_error_and_delay message
