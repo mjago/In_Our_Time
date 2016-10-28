@@ -729,83 +729,81 @@ class InOurTime
     end
   end
 
+  def do_action ip
+    case ip
+    when :pause, :forward, :rewind
+      self.send ip
+    when :list
+      @line_count = 0
+      @selected = 0
+      display_list :next_page
+    when :page_forward
+      @selected = @line_count
+      display_list :next_page
+    when :previous
+      @selected -= 1 if @selected > 0
+      if @selected >= @line_count -
+         @config[:page_height]
+        redraw
+      else
+        display_list :previous_page
+      end
+    when :next
+      @selected += 1
+      if @selected <= @line_count - 1
+        redraw
+      else
+        display_list :next_page
+      end
+    when :play
+      if @playing
+        kill_audio
+      else
+        kill_audio
+        title = @sorted_titles[@selected]
+        pr = select_program title
+        run_program pr
+        redraw
+      end
+    when :sort
+      sort
+    when :update
+      update
+      parse_rss
+      sort_titles
+      @line_count = 0
+      @selected = 0
+      display_list :next_page
+    when :info
+      info
+    when :help
+      help
+    when :quit
+      kill_audio
+      quit
+    end
+  end
+
+  def reset_info_maybe ip
+    @info = nil unless ip == :info
+    @help = nil unless ip == :help
+  end
+
   def run
     ip, action = '', :unknown
     @tic, @key = Tic.new, KeyboardEvents.new
-    @tic.run
-    @key.run
-
     redraw
+
     loop do
-
-      unless action == :unknown
-        @key.reset
-      end
-
+      @key.reset
       loop do
         ip = @key.read
         break unless ip == :no_event
         check_process if @tic.toc
         do_events
       end
-
-      @info = nil unless ip == :info
-      @help = nil unless ip == :help
-
-      action =
-        case ip
-        when :pause, :forward, :rewind
-          self.send ip
-        when :list
-          @line_count = 0
-          @selected = 0
-          display_list :next_page
-        when :page_forward
-          @selected = @line_count
-          display_list :next_page
-        when :previous
-          @selected -= 1 if @selected > 0
-          if @selected >= @line_count -
-             @config[:page_height]
-            redraw
-          else
-            display_list :previous_page
-          end
-        when :next
-          @selected += 1
-          if @selected <= @line_count - 1
-            redraw
-          else
-            display_list :next_page
-          end
-        when :play
-          if @playing
-            kill_audio
-            @playing = nil
-          else
-            kill_audio
-            title = @sorted_titles[@selected]
-            pr = select_program title
-            run_program pr
-            redraw
-          end
-        when :sort
-          sort
-        when :update
-          update
-          parse_rss
-          sort_titles
-          @line_count = 0
-          @selected = 0
-          display_list :next_page
-        when :info
-          info
-        when :help
-          help
-        when :quit
-          kill_audio
-          quit
-        end
+      reset_info_maybe ip
+      do_action ip
       do_events
     end
   end
