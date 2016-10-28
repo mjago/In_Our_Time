@@ -579,27 +579,36 @@ class InOurTime
     end
   end
 
+  def help_screen
+    []                                     <<
+      " In Our Time Player (#{@version})"  <<
+      "                                 "  <<
+      " Play/Stop     - X or Enter      "  <<
+      " Previous/Next - Down / Up       "  <<
+      " Next Page     - SPACE           "  <<
+      " Sort          - S               "  <<
+      " List Top      - L               "  <<
+      " Update        - U               "  <<
+      " Info          - I               "  <<
+      " Help          - H               "  <<
+      " Quit          - Q               "  <<
+      "                                 "  <<
+      " mpg123 Controls:                "  <<
+      "  Pause/Resume - P               "  <<
+      "  Forward Skip - F               "  <<
+      "  Reverse Skip - R               "  <<
+      "                                 "  <<
+      "Config: #{CONFIG}                "
+  end
+
+  def print_help
+    iot_puts help_screen.map{|x|x.rstrip}.join("\n\r"), @system_colour
+  end
+
   def help
     unless @help
       clear
-      iot_puts " In Our Time Player (#{@version})"
-      iot_puts " Next      - N or Down Key ", @system_colour
-      iot_puts " Previous  - P or Up Key   ", @system_colour
-      iot_puts " Next Page - SPACE         ", @system_colour
-      iot_puts " Play/Stop - X or Enter    ", @system_colour
-      iot_puts " Sort      - S             ", @system_colour
-      iot_puts " List Top  - L             ", @system_colour
-      iot_puts " Update    - U             ", @system_colour
-      iot_puts " Info      - I             ", @system_colour
-      iot_puts " Help      - H             ", @system_colour
-      iot_puts " Quit      - Q             ", @system_colour
-      iot_puts
-      iot_puts " mpg123 Controls:          ", @system_colour
-      iot_puts "    Pause/Resume - P       ", @system_colour
-      iot_puts "    Forward Skip - F       ", @system_colour
-      iot_puts "    Reverse Skip - R       ", @system_colour
-      iot_puts
-      iot_puts "Config: #{CONFIG}", @system_colour
+      print_help
       print_playing_maybe
       @help = true
     else
