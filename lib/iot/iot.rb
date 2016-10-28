@@ -30,6 +30,7 @@ class InOurTime
     def initialize
       @mode = :normal
       @event = :no_event
+      run
     end
 
     def reset
@@ -58,17 +59,14 @@ class InOurTime
             else
               case @mode
               when :escape
-                if str == "["
-                  @mode = :escape_2
-                else
-                  @mode = :normal
-                end
+                @mode =
+                  str == "[" ? :escape_2 : :normal
               when :escape_2
-                @event =  :previous     if str == "A"
-                @event =  :next         if str == "B"
-                @event = :page_forward  if str == "C"
-                @event = :previous      if str == "D"
-                @mode = :normal
+                @event = :previous     if str == "A"
+                @event = :next         if str == "B"
+                @event = :page_forward if str == "C"
+                @event = :previous     if str == "D"
+                @mode  = :normal
 
               else
                 break if @event == :no_event
@@ -76,37 +74,40 @@ class InOurTime
             end
             ke_events
           end
-
-          case str
-          when "\e"
-            @mode = :escape
-          when "l",'L'
-            @event = :list
-          when "u",'U'
-            @event = :update
-          when ' '
-            @event = :page_forward
-          when "q",'Q', "\u0003", "\u0004"
-            @event = :quit
-          when 'p', 'P'
-            @event = :pause
-          when 'f', 'F'
-            @event = :forward
-          when 'r', 'R'
-            @event = :rewind
-          when 's', 'S'
-            @event = :sort
-          when 'x', 'X', "\r"
-            @event = :play
-          when 'i', 'I'
-            @event = :info
-          when '?', 'h'
-            @event = :help
-          else
-            @event = :no_event
-          end
+          match_event str
           ke_events
         end
+      end
+    end
+
+    def match_event str
+      case str
+      when "\e"
+        @mode = :escape
+      when "l",'L'
+        @event = :list
+      when "u",'U'
+        @event = :update
+      when ' '
+        @event = :page_forward
+      when "q",'Q', "\u0003", "\u0004"
+        @event = :quit
+      when 'p', 'P'
+        @event = :pause
+      when 'f', 'F'
+        @event = :forward
+      when 'r', 'R'
+        @event = :rewind
+      when 's', 'S'
+        @event = :sort
+      when 'x', 'X', "\r"
+        @event = :play
+      when 'i', 'I'
+        @event = :info
+      when '?', 'h'
+        @event = :help
+      else
+        @event = :no_event
       end
     end
   end
@@ -114,6 +115,7 @@ class InOurTime
   class Tic
     def initialize
       @flag = false
+      run
     end
 
     def run
@@ -147,6 +149,7 @@ class InOurTime
 
   def do_events
     sleep 0.003
+    sleep 0.1
   end
 
   def quit code = 0
@@ -492,24 +495,19 @@ class InOurTime
 
   def print_playing_maybe
     if @playing
-      iot_print("\nPlaying: ", @count_colour) unless @paused
-      iot_print("\nPaused: ", @count_colour) if @paused
+      iot_print("Playing: ", @count_colour) unless @paused
+      iot_print("Paused: ", @count_colour) if @paused
       iot_puts @playing, @selection_colour
     elsif @started.nil?
       @started = true
-      iot_puts "\n? or h for instructions", @text_colour
-    else
-      iot_puts "\n"
+      iot_print "? or h for instructions", @text_colour
+      iot_print "", :white
     end
-  end
-
-  def kill_cmd
-    "killall " +
-      @config[:mpg_player].to_s
   end
 
   def kill_audio
     if @playing
+      @playing = nil
       if @pid.is_a? Fixnum
         Process.kill('QUIT', @pid)
         sleep 0.2
@@ -618,8 +616,7 @@ class InOurTime
   end
 
   def reformat info
-    ['With','Guests',
-     'Producer','Contributors'].map do | x|
+    ['With','Guests','Producer','Contributors'].map do | x|
       [' ', ':'].map do |y|
         [x, x.upcase].map do |z|
           info.gsub!(z + y, "\n" + z + y)
