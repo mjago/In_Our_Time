@@ -652,7 +652,7 @@ class InOurTime
       top = top + shift
       bottom = bottom + shift
       loop do
-        if idx = info[top..bottom].index("\n")
+        if idx == info[top..bottom].index("\n")
           pages[page] << info[top..top + idx]
           page = 1
           bottom = top + idx + @config[:page_width] + 1
