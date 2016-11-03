@@ -23,6 +23,14 @@ class InOurTime
   RSS_DIRECTORY   = 'rss'
   PAGE_HEIGHT     = 20
   PAGE_WIDTH      = 80
+  TITLE =
+    %q{  _____          ____               _______ _
+ |_   _|        / __ \             |__   __(_)
+   | |  _ __   | |  | |_   _ _ __     | |   _ _ __ ___   ___
+   | | | '_ \  | |  | | | | | '__|    | |  | | '_ ` _ \ / _ \
+  _| |_| | | | | |__| | |_| | |       | |  | | | | | | |  __/
+ |_____|_| |_|  \____/ \__,_|_|       |_|  |_|_| |_| |_|\___|
+}
 
   class KeyboardEvents
     def initialize
@@ -134,12 +142,14 @@ class InOurTime
   end
 
   def initialize
+    clear
     @programs = []
     @selected = 0
     setup
     load_config
     load_version
     load_help_maybe
+    opening_title
     display_version
     check_remote
     parse_rss
@@ -159,7 +169,7 @@ class InOurTime
   end
 
   def version_display_wait
-    do_events while Time.now - @start_time < 1
+    do_events while Time.now - @start_time < 3.0
   end
 
   def iot_print x, col = @text_colour
@@ -188,10 +198,16 @@ class InOurTime
     local_rss.map{|f| FileUtils.touch(File.join pages, f)}
   end
 
+def opening_title
+  iot_puts TITLE, :light_green
+  sleep 1.5
+  clear
+  iot_puts TITLE, @system_colour
+end
+
   def display_version
-    clear
-    iot_print("Loading ", @system_colour) unless ARGV[0] == '-v' || ARGV[0] == '--version'
-    iot_puts "In Our Time Player (#{@version})", @system_colour
+    iot_print(' ' * 10 + "Loading ", :light_green) unless ARGV[0] == '-v' || ARGV[0] == '--version'
+    iot_puts "In Our Time Player (#{@version})", :light_green
     quit if ARGV[0] == '-v' || ARGV[0] == '--version'
   end
 
@@ -422,9 +438,9 @@ class InOurTime
     system('clear') || system('cls')
   end
 
-  def print_error_and_delay message
+  def print_error_and_delay message, delay = 2
     iot_puts message, :red
-    sleep 2
+    sleep delay
   end
 
   def run_program prg
@@ -665,7 +681,8 @@ class InOurTime
       top = top + shift
       bottom = bottom + shift
       loop do
-        if idx == info[top..bottom].index("\n")
+        idx = info[top..bottom].index("\n")
+        if idx
           pages[page] << info[top..top + idx]
           page = 1
           bottom = top + idx + @config[:page_width] + 1
@@ -680,14 +697,16 @@ class InOurTime
         break
       end
       pages[page] << info[top..bottom]
-      bottom = bottom + @config[:page_width]
       top = bottom
+      bottom = bottom + @config[:page_width]
     end
     pages
   end
 
   def print_subtitle prg
     clear
+    TITLE.split("\n").map{|l| iot_print(l + "\r\n", @system_colour)}
+    iot_puts
     justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
     print_program_details prg
     @info = 1
