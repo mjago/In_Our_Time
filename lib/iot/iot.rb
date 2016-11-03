@@ -368,6 +368,8 @@ class InOurTime
   def sort
     title = @sorted_titles[@selected]
     @sort = @sort == :age ? :alphabet : :age
+    @config[:sort] = @sort
+    save_config
     sort_titles
     @selected, @line_count = sort_selected(title)
     redraw
