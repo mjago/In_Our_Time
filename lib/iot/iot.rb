@@ -97,6 +97,8 @@ class InOurTime
         @event = :rewind
       when 's', 'S'
         @event = :sort
+      when 't', 'T'
+        @event = :theme_toggle
       when 'x', 'X', "\r"
         @event = :play
       when 'i', 'I'
@@ -206,13 +208,26 @@ class InOurTime
     save_config
   end
 
-  def do_configs
+  def init_theme
     theme = @config[:colour_theme]
     @selection_colour = @config[theme][:selection_colour]
     @count_sel_colour = @config[theme][:count_sel_colour]
     @count_colour     = @config[theme][:count_colour]
     @text_colour      = @config[theme][:text_colour]
     @system_colour    = @config[theme][:system_colour]
+  end
+
+  def theme_toggle
+    theme = @config[:colour_theme]
+    @config[:colour_theme] = theme == :light_theme ?
+                               :dark_theme : :light_theme
+    save_config
+    init_theme
+    redraw
+  end
+
+  def do_configs
+    init_theme
     rows, cols = $stdout.winsize
     while(rows % 10 != 0) ; rows -=1 ; end
     while(cols % 10 != 0) ; cols -=1 ; end
@@ -586,6 +601,7 @@ class InOurTime
       " Previous/Next - Down / Up       "  <<
       " Next Page     - SPACE           "  <<
       " Sort          - S               "  <<
+      " Theme Toggle  - T               "  <<
       " List Top      - L               "  <<
       " Update        - U               "  <<
       " Info          - I               "  <<
@@ -780,6 +796,8 @@ class InOurTime
       end
     when :sort
       sort
+    when :theme_toggle
+      theme_toggle
     when :update
       update
       parse_rss
