@@ -10,7 +10,6 @@ require 'pty'
 require 'io/console'
 
 class InOurTime
-
   ROOT            = File.expand_path '~/'
   HERE            = File.dirname(__FILE__)
   CONFIG_DIR      = '.in_our_time'
@@ -26,7 +25,6 @@ class InOurTime
   PAGE_WIDTH      = 80
 
   class KeyboardEvents
-
     def initialize
       @mode = :normal
       @event = :no_event
@@ -43,7 +41,6 @@ class InOurTime
 
     def read
       ret_val = @event
-    #  reset
       @event = :no_event
       ret_val
     end
@@ -184,10 +181,9 @@ class InOurTime
     pages = File.join iot, RSS_DIRECTORY
     Dir.mkdir iot unless Dir.exist? iot
     Dir.mkdir audio unless Dir.exist? audio
-    unless Dir.exist? pages
-      Dir.mkdir pages
-      local_rss.map{|f| FileUtils.touch(File.join pages, f)}
-    end
+    return if Dir.exist?(pages)
+    Dir.mkdir pages
+    local_rss.map{|f| FileUtils.touch(File.join pages, f)}
   end
 
   def display_version
@@ -206,7 +202,7 @@ class InOurTime
   end
 
   def create_config
-    @config = YAML::load_file(DEFAULT_CONFIG)
+    @config = YAML.load_file(DEFAULT_CONFIG)
     save_config
   end
 
@@ -230,7 +226,7 @@ class InOurTime
 
   def load_config
     create_config unless File.exist? CONFIG
-    @config = YAML::load_file(CONFIG)
+    @config = YAML.load_file(CONFIG)
     do_configs
   end
 
@@ -269,7 +265,7 @@ class InOurTime
   end
 
   def filename_from_title title
-    temp = title.gsub(/[^0-9a-z ]/i, '').gsub(' ', '_').strip + '.mp3'
+    temp = title.gsub(/[^0-9a-z ]/i, '').tr(' ', '_').strip + '.mp3'
     File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase
   end
 
@@ -315,10 +311,9 @@ class InOurTime
 
   def uniquify_programs
     @programs = @programs.uniq{|pr| pr[:title]}
-    unless @programs.uniq.length == @programs.length
-      print_error_and_delay "Error ensuring Programs unique!"
-      quit 1
-    end
+    return if @programs.uniq.length == @programs.length
+    print_error_and_delay "Error ensuring Programs unique!"
+    quit 1
   end
 
   def parse_rss
@@ -407,7 +402,7 @@ class InOurTime
   end
 
   def clear
-    system 'clear' or system 'cls'
+    system('clear') || system('cls')
   end
 
   def print_error_and_delay message
@@ -478,11 +473,10 @@ class InOurTime
   end
 
   def pause
-    if control_play?
-      @paused  = @paused ? false : true
-      write_player " "
-      redraw
-    end
+    return unless control_play?
+    @paused = @paused ? false : true
+    write_player " "
+    redraw
   end
 
   def control_play?
@@ -510,14 +504,12 @@ class InOurTime
   end
 
   def kill_audio
-    if @playing
-      @playing = nil
-      if @pid.is_a? Integer
-        Process.kill('QUIT', @pid)
-        sleep 0.2
-        reset
-      end
-    end
+    return unless @playing
+    @playing = nil
+    return unless @pid.is_a?(Integer)
+    Process.kill('QUIT', @pid)
+    sleep 0.2
+    reset
   end
 
   def idx_format idx
@@ -526,7 +518,7 @@ class InOurTime
 
   def show_count_maybe idx
     if have_locally?(@sorted_titles[idx])
-      iot_print idx_format(idx), @count_sel_colour  if @config[:show_count]
+      iot_print idx_format(idx), @count_sel_colour if @config[:show_count]
     else
       iot_print idx_format(idx), @count_colour if @config[:show_count]
     end
@@ -574,11 +566,14 @@ class InOurTime
     end
   end
 
+  def help_option?
+    ARGV[0] == '-h' || ARGV[0] == '--help' || ARGV[0] == '-?'
+  end
+
   def load_help_maybe
-    if ARGV[0] == '-h' || ARGV[0] == '--help' || ARGV[0] == '-?'
-      help
-      quit
-    end
+    return unless help_option?
+    help
+    quit
   end
 
   def help_screen
