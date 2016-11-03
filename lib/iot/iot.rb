@@ -128,13 +128,15 @@ class InOurTime
     end
 
     def toc
-      ret_val, @flag = @flag, false
+      ret_val = @flag
+      @flag = false
       ret_val
     end
   end
 
   def initialize
-    @programs, @selected = [], 0
+    @programs = []
+    @selected = 0
     setup
     load_config
     load_version
@@ -460,7 +462,9 @@ class InOurTime
   end
 
   def reset
-    @pid, @playing, @paused = nil, nil, nil
+    @pid = nil
+    @playing = nil
+    @paused = nil
     window_title
     redraw
   end
@@ -640,14 +644,19 @@ class InOurTime
 
   def justify info
     pages = [[],[]]
-    page, top, bottom = 0, 0, @config[:page_width]
+    page = 0
+    top = 0
+    bottom = @config[:page_width]
     loop do
       shift = top_space info[top..bottom]
-      top, bottom = top + shift, bottom + shift
+      top = top + shift
+      bottom = bottom + shift
       loop do
         if idx = info[top..bottom].index("\n")
           pages[page] << info[top..top + idx]
-          page,bottom,top = 1,top + idx + @config[:page_width] + 1, top + idx + 1
+          page = 1
+          bottom = top + idx + @config[:page_width] + 1
+          top = top + idx + 1
         else
           break if bottom_space? info[bottom]
           bottom -= 1
@@ -658,7 +667,8 @@ class InOurTime
         break
       end
       pages[page] << info[top..bottom]
-      bottom, top = bottom + @config[:page_width], bottom
+      bottom = bottom + @config[:page_width]
+      top = bottom
     end
     pages
   end
@@ -796,8 +806,10 @@ class InOurTime
   end
 
   def run
-    ip, action = '', :unknown
-    @tic, @key = Tic.new, KeyboardEvents.new
+    ip = ''
+    action = :unknown
+    @tic = Tic.new
+    @key = KeyboardEvents.new
     redraw
 
     loop do
