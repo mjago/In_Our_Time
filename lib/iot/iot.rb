@@ -290,7 +290,7 @@ class InOurTime
 
   def have_locally? title
     filename = filename_from_title(title)
-    File.exists?(filename) ? true : false
+    File.exist?(filename) ? true : false
   end
 
   def rss_files
@@ -331,7 +331,7 @@ class InOurTime
       dates     = @doc.xpath('rss/channel/item/pubDate')
       links     = @doc.xpath('rss/channel/item/link')
 
-      0.upto (titles.length - 1) do |idx|
+      0.upto(titles.length - 1) do |idx|
         program = {}
         program[:title] = titles[idx].text
         program[:subtitle] = subtitles[idx].text
@@ -512,7 +512,7 @@ class InOurTime
   def kill_audio
     if @playing
       @playing = nil
-      if @pid.is_a? Fixnum
+      if @pid.is_a? Integer
         Process.kill('QUIT', @pid)
         sleep 0.2
         reset
@@ -731,10 +731,10 @@ class InOurTime
   end
 
   def check_process
-    if(@playing && @pid.is_a?(Fixnum))
+    if(@playing && @pid.is_a?(Integer))
       begin
         write_player( "\e")
-        if @pid.is_a? Fixnum
+        if @pid.is_a? Integer
           Process.kill 0, @pid
         end
       rescue Errno::ESRCH
@@ -807,7 +807,6 @@ class InOurTime
 
   def run
     ip = ''
-    action = :unknown
     @tic = Tic.new
     @key = KeyboardEvents.new
     redraw
