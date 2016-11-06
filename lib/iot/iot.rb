@@ -8,6 +8,7 @@ require 'colorize'
 require 'oga'
 require 'pty'
 require 'io/console'
+require_relative 'keyboard_events'
 
 class InOurTime
   ROOT            = File.expand_path '~/'
@@ -30,94 +31,7 @@ class InOurTime
    | | | '_ \  | |  | | | | | '__|    | |  | | '_ ` _ \ / _ \
   _| |_| | | | | |__| | |_| | |       | |  | | | | | | |  __/
  |_____|_| |_|  \____/ \__,_|_|       |_|  |_|_| |_| |_|\___|
-}
-
-  class KeyboardEvents
-    def initialize
-      @mode = :normal
-      @event = :no_event
-      run
-    end
-
-    def reset
-      STDIN.flush
-    end
-
-    def ke_events
-      sleep 0.001
-    end
-
-    def read
-      ret_val = @event
-      @event = :no_event
-      ret_val
-    end
-
-    def run
-      Thread.new do
-        loop do
-          str = ''
-          loop do
-            str = STDIN.getch
-            if str == "\e"
-              @mode = :escape
-            else
-              case @mode
-              when :escape
-                @mode =
-                  str == "[" ? :escape_2 : :normal
-              when :escape_2
-                @event = :previous     if str == "A"
-                @event = :next         if str == "B"
-                @event = :page_forward if str == "C"
-                @event = :previous     if str == "D"
-                @mode  = :normal
-
-              else
-                break if @event == :no_event
-              end
-            end
-            ke_events
-          end
-          match_event str
-          ke_events
-        end
-      end
-    end
-
-    def match_event str
-      case str
-      when "\e"
-        @mode = :escape
-      when "l",'L'
-        @event = :list
-      when "u",'U'
-        @event = :update
-      when ' '
-        @event = :page_forward
-      when "q",'Q', "\u0003", "\u0004"
-        @event = :quit
-      when 'p', 'P'
-        @event = :pause
-      when 'f', 'F'
-        @event = :forward
-      when 'r', 'R'
-        @event = :rewind
-      when 's', 'S'
-        @event = :sort
-      when 't', 'T'
-        @event = :theme_toggle
-      when 'x', 'X', "\r"
-        @event = :play
-      when 'i', 'I'
-        @event = :info
-      when '?', 'h'
-        @event = :help
-      else
-        @event = :no_event
-      end
-    end
-  end
+}.freeze
 
   class Tic
     def initialize
@@ -125,8 +39,12 @@ class InOurTime
       run
     end
 
+    def kill
+      Thread.kill(@th_tic) if @th_tic
+    end
+
     def run
-      Thread.new do
+      @th_tic = Thread.new do
         loop do
           sleep 1
           @flag = true
@@ -142,9 +60,11 @@ class InOurTime
   end
 
   def initialize
-    clear
+    @content = ''
     @programs = []
     @selected = 0
+    clear
+    print "\e[?25h"
     setup
     load_config
     load_version
@@ -164,22 +84,38 @@ class InOurTime
   end
 
   def quit code = 0
-    system("stty -raw echo")
+    STDIN.echo = true
+    STDIN.cooked!
+    clear
+    puts 'Quitting...'
+    clear
+    @key.kill
+    @tic.kill
     exit code
   end
 
   def version_display_wait
+    return if dev_mode?
     do_events while Time.now - @start_time < 3.0
   end
 
   def iot_print x, col = @text_colour
-    STDOUT.print x.colorize col if @config[:colour]
-    STDOUT.print x          unless @config[:colour]
+    @content << x.colorize(col) if @config[:colour]
+    @content << x           unless @config[:colour]
   end
 
   def iot_puts x = '', col = @text_colour
     iot_print x, col
     iot_print "\n\r"
+  end
+
+  def clear_content
+    @content.clear
+  end
+
+  def render
+    clear
+    $stdout << @content
   end
 
   def now
@@ -198,12 +134,19 @@ class InOurTime
     local_rss.map{|f| FileUtils.touch(File.join pages, f)}
   end
 
-def opening_title
-  iot_puts TITLE, :light_green
-  sleep 1.5
-  clear
-  iot_puts TITLE, @system_colour
-end
+  def dev_mode?
+    ENV['IN_OUR_TIME'] == 'development'
+  end
+
+  def opening_title
+    return if dev_mode?
+    iot_puts TITLE, :light_green
+    render
+    sleep 1.5
+    clear_content
+    iot_puts TITLE, @system_colour
+    render
+  end
 
   def display_version
     iot_print(' ' * 10 + "Loading ", :light_green) unless ARGV[0] == '-v' || ARGV[0] == '--version'
@@ -300,18 +243,22 @@ end
     File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase
   end
 
-  def download_audio program, addr
+  def download_audio(program, addr)
     res = Net::HTTP.get_response(URI.parse(addr))
     case res
     when Net::HTTPOK
       File.open(filename_from_title(program[:title]) , 'wb') do |f|
         iot_print "writing #{filename_from_title(program[:title])}...", @system_colour
+        render
         f.print(res.body)
         iot_puts " written.", @system_colour
+        render
       end
       program[:have_locally] = true
     else
       iot_puts 'Download failed. Retrying...', @system_colour
+      render
+      nil
     end
   end
 
@@ -325,13 +272,14 @@ end
   end
 
   def update
-    clear
+    clear_content
     iot_print "Checking rss feeds ", @system_colour
     local_rss.length.times do |count|
       iot_print '.', @system_colour
+      render
       fetch_uri rss_addresses[count], rss_files[count]
     end
-    iot_puts
+#    iot_puts
     @config[:last_update] = now
     save_config
   end
@@ -446,32 +394,37 @@ end
   def run_program prg
     unless prg[:have_locally]
       retries = 0
-      clear
+      clear_content
       iot_puts "Fetching #{prg[:title]}", @system_colour
+      render
       10.times do
         begin
           res = Net::HTTP.get_response(URI.parse(prg[:link]))
         rescue SocketError => e
           print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
+          render
           @no_play = true
           break
         end
         case res
         when Net::HTTPFound
           iot_puts 'redirecting...', @system_colour
+          render
           @doc = Oga.parse_xml(res.body)
           redirect = @doc.css("body p a").text
           break if download_audio(prg, redirect)
           sleep 2
         else
           print_error_and_delay 'Error! Failed to be redirected!'
+          render
           @no_play = true
-          break
+#          break
         end
         retries += 1
       end
       if retries >= 10
         print_error_and_delay "Max retries downloading #{prg[:title]}"
+        render
         @no_play = true
       end
     end
@@ -532,7 +485,6 @@ end
     elsif @started.nil?
       @started = true
       iot_print "? or h for instructions", @text_colour
-      iot_print "", :white
     end
   end
 
@@ -559,6 +511,7 @@ end
   end
 
   def draw_page
+    clear_content
     if @line_count <= @sorted_titles.length
       @line_count.upto(@line_count + @config[:page_height] - 1) do |idx|
         if idx < @sorted_titles.length
@@ -578,10 +531,10 @@ end
     end
     @line_count += @config[:page_height]
     print_playing_maybe
+    render
   end
 
   def display_list action
-    clear
     case action
     when :next_page
       draw_page
@@ -638,10 +591,11 @@ end
 
   def help
     unless @help
-      clear
+      clear_content
       print_help
       print_playing_maybe
       @help = true
+      render
     else
       redraw
       @help = nil
@@ -722,7 +676,6 @@ end
 
   def print_info prg
     info = prg[:summary].gsub(/\s+/, ' ')
-    clear
     count = 1
     justify(reformat(info))[0].each do |x|
       if (count > (@page_count - 1) * @config[:page_height]) &&
@@ -746,6 +699,7 @@ end
   end
 
   def info
+    clear_content
     case @info
     when nil
       prg = select_program @sorted_titles[@selected]
@@ -759,7 +713,9 @@ end
     else
       redraw
       @info = nil
+      return
     end
+    render
   end
 
   def check_process
@@ -777,60 +733,69 @@ end
     end
   end
 
-  def do_action ip
-    case ip
-    when :pause, :forward, :rewind
-      self.send ip
-    when :list
-      @line_count = 0
-      @selected = 0
+  def list
+    @line_count = 0
+    @selected = 0
+    display_list :next_page
+  end
+
+  def page_forward
+    @selected = @line_count
+    display_list :next_page
+  end
+
+  def previous
+    @selected -= 1 if @selected > 0
+    if @selected >= @line_count -
+                    @config[:page_height]
+      redraw
+    else
+      display_list :previous_page
+    end
+  end
+
+  def next
+    @selected += 1
+    if @selected <= @line_count - 1
+      redraw
+    else
       display_list :next_page
-    when :page_forward
-      @selected = @line_count
-      display_list :next_page
-    when :previous
-      @selected -= 1 if @selected > 0
-      if @selected >= @line_count -
-         @config[:page_height]
-        redraw
-      else
-        display_list :previous_page
-      end
-    when :next
-      @selected += 1
-      if @selected <= @line_count - 1
-        redraw
-      else
-        display_list :next_page
-      end
-    when :play
-      if @playing
-        kill_audio
-      else
-        kill_audio
-        title = @sorted_titles[@selected]
-        pr = select_program title
-        run_program pr
-        redraw
-      end
-    when :sort
-      sort
-    when :theme_toggle
-      theme_toggle
-    when :update
+    end
+  end
+
+  def play
+    if @playing
+      kill_audio
+    else
+      kill_audio
+      title = @sorted_titles[@selected]
+      pr = select_program title
+      run_program pr
+      redraw
+    end
+  end
+
+  def key_update
       update
       parse_rss
       sort_titles
       @line_count = 0
       @selected = 0
       display_list :next_page
-    when :info
-      info
-    when :help
-      help
-    when :quit
-      kill_audio
-      quit
+  end
+
+  def key_quit
+    kill_audio
+    quit
+  end
+
+  def do_action ip
+    case ip
+    when :pause, :forward, :rewind,
+         :list, :page_forward, :previous,
+         :next, :play, :sort, :theme_toggle,
+         :key_update, :info, :help, :key_quit
+      self.send ip
     end
   end
 
@@ -846,7 +811,6 @@ end
     redraw
 
     loop do
-      @key.reset
       loop do
         ip = @key.read
         break unless ip == :no_event

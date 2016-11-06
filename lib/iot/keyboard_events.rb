@@ -14,7 +14,7 @@ class KeyboardEvents
   end
 
   def do_events
-    sleep 0.1
+    sleep 0.001
   end
 
   def kill
@@ -23,7 +23,7 @@ class KeyboardEvents
   end
 
   def update_wait
-    @wait = Time.now + 0.05
+    @wait = Time.now + 0.02
   end
 
   def read
