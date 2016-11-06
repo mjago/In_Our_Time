@@ -1,0 +1,100 @@
+class KeyboardEvents
+  def initialize
+    update_wait
+    @mode = :normal
+    @event = :no_event
+    @alive = true
+    STDIN.echo = false
+    STDIN.raw!
+    run
+  end
+
+  def reset
+    STDIN.flush
+  end
+
+  def do_events
+    sleep 0.1
+  end
+
+  def kill
+    @alive = nil
+    Thread.kill(@key) if @key
+  end
+
+  def update_wait
+    @wait = Time.now + 0.05
+  end
+
+  def read
+    update_wait unless @event == :no_event
+    ret_val = @event
+    @event = :no_event unless @event == :key_quit
+    ret_val
+  end
+
+  def run
+    @key = Thread.new do
+      while @event != :key_quit
+        str = ''
+        loop do
+          str = STDIN.getch
+          next if Time.now < @wait
+          if str == "\e"
+            @mode = :escape
+          else
+            case @mode
+            when :escape
+              @mode =
+                str == "[" ? :escape_2 : :normal
+            when :escape_2
+              @event = :previous     if str == "A"
+              @event = :next         if str == "B"
+              @event = :page_forward if str == "C"
+              @event = :previous     if str == "D"
+              @mode  = :normal
+            else
+              break if @event == :no_event
+            end
+          end
+          do_events
+        end
+        match_event str
+      end
+    end
+  end
+
+  def match_event str
+    case str
+    when "\e"
+      @mode = :escape
+    when "l",'L'
+      @event = :list
+    when "u",'U'
+      @event = :key_update
+    when ' '
+      @event = :page_forward
+    when "q",'Q', "\u0003", "\u0004"
+      @event = :key_quit
+    when 'p', 'P'
+      @event = :pause
+    when 'f', 'F'
+      @event = :forward
+    when 'r', 'R'
+      @event = :rewind
+    when 's', 'S'
+      @event = :sort
+    when 't', 'T'
+      @event = :theme_toggle
+    when 'x', 'X', "\r"
+      @event = :play
+    when 'i', 'I'
+      @event = :info
+    when '?', 'h', 'H'
+      @event = :help
+    else
+      return @event = :no_event
+    end
+  end
+end
+
