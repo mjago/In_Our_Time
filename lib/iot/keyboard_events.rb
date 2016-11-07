@@ -25,7 +25,7 @@ class KeyboardEvents
   end
 
   def reset_event
-    @event = :no_event unless @event == :key_quit
+    @event = :no_event unless @event == :quit_key
   end
 
   def read
@@ -37,7 +37,7 @@ class KeyboardEvents
 
   def run
     @key = Thread.new do
-      while @event != :key_quit
+      while @event != :quit_key
         str = ''
         loop do
           str = STDIN.getch
@@ -73,11 +73,11 @@ class KeyboardEvents
     when "l",'L'
       @event = :list_key
     when "u",'U'
-      @event = :key_update
+      @event = :update_key
     when ' '
       @event = :page_forward
     when "q",'Q', "\u0003", "\u0004"
-      @event = :key_quit
+      @event = :quit_key
     when 'p', 'P'
       @event = :pause
     when 'f', 'F'

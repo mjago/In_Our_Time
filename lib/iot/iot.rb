@@ -812,7 +812,7 @@ class InOurTime
     end
   end
 
-  def key_update
+  def update_key
       update
       parse_rss
       sort_titles
@@ -821,7 +821,7 @@ class InOurTime
       display_list :next_page
   end
 
-  def key_quit
+  def quit_key
     kill_audio
     quit
   end
@@ -831,7 +831,7 @@ class InOurTime
     when :pause, :forward, :rewind,
          :list_key, :page_forward, :previous,
          :next, :play, :sort_key, :theme_toggle,
-         :key_update, :info, :help, :key_quit
+         :update_key, :info, :help, :quit_key
       self.send ip
     end
   end
