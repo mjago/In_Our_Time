@@ -75,6 +75,8 @@ class InOurTime
     parse_rss
     sort_titles
     version_display_wait
+    STDIN.echo = false
+    STDIN.raw!
     run
   end
 
@@ -188,7 +190,7 @@ class InOurTime
   def do_configs
     init_theme
     rows, cols = $stdout.winsize
-    while(rows % 10 != 0) ; rows -=1 ; end
+    while(rows -2 % 10 != 0) ; rows -=1 ; end
     while(cols % 10 != 0) ; cols -=1 ; end
     rows = 10 if rows < 10
     cols = 20 if cols < 20
@@ -344,14 +346,55 @@ class InOurTime
     end
   end
 
-  def sort
+  def list_selected title
+    @selected, @line_count = sort_selected(title)
+    redraw
+  end
+
+  def list_playing
     title = @sorted_titles[@selected]
+    if title == @playing
+      list_top
+    else
+      list_selected @playing
+    end
+  end
+
+  def list_stopped
+    if @selected == 0
+      title = @sorted_titles[@last_selected || 0]
+      list_selected title
+    else
+      list_top
+    end
+  end
+
+  def list_key
+    if @playing
+      list_playing
+    else
+      list_stopped
+    end
+  end
+
+  def list_top
+    @last_selected = @selected
+    @line_count = 0
+    @selected = 0
+    display_list :next_page
+  end
+
+  def sort_key
+    title = @sorted_titles[@selected]
+    toggle_sort
+    list_selected title
+  end
+
+  def toggle_sort
     @sort = @sort == :age ? :alphabet : :age
     @config[:sort] = @sort
     save_config
     sort_titles
-    @selected, @line_count = sort_selected(title)
-    redraw
   end
 
   def redraw
@@ -733,12 +776,6 @@ class InOurTime
     end
   end
 
-  def list
-    @line_count = 0
-    @selected = 0
-    display_list :next_page
-  end
-
   def page_forward
     @selected = @line_count
     display_list :next_page
@@ -792,8 +829,8 @@ class InOurTime
   def do_action ip
     case ip
     when :pause, :forward, :rewind,
-         :list, :page_forward, :previous,
-         :next, :play, :sort, :theme_toggle,
+         :list_key, :page_forward, :previous,
+         :next, :play, :sort_key, :theme_toggle,
          :key_update, :info, :help, :key_quit
       self.send ip
     end

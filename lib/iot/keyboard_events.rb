@@ -4,8 +4,6 @@ class KeyboardEvents
     @mode = :normal
     @event = :no_event
     @alive = true
-    STDIN.echo = false
-    STDIN.raw!
     run
   end
 
@@ -26,10 +24,14 @@ class KeyboardEvents
     @wait = Time.now + 0.02
   end
 
+  def reset_event
+    @event = :no_event unless @event == :key_quit
+  end
+
   def read
     update_wait unless @event == :no_event
     ret_val = @event
-    @event = :no_event unless @event == :key_quit
+    reset_event
     ret_val
   end
 
@@ -69,7 +71,7 @@ class KeyboardEvents
     when "\e"
       @mode = :escape
     when "l",'L'
-      @event = :list
+      @event = :list_key
     when "u",'U'
       @event = :key_update
     when ' '
@@ -83,7 +85,7 @@ class KeyboardEvents
     when 'r', 'R'
       @event = :rewind
     when 's', 'S'
-      @event = :sort
+      @event = :sort_key
     when 't', 'T'
       @event = :theme_toggle
     when 'x', 'X', "\r"
