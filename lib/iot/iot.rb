@@ -22,16 +22,6 @@ class InOurTime
   UPDATE_INTERVAL = 604800
   AUDIO_DIRECTORY = 'audio'
   RSS_DIRECTORY   = 'rss'
-  PAGE_HEIGHT     = 20
-  PAGE_WIDTH      = 80
-  TITLE =
-    %q{  _____          ____               _______ _
- |_   _|        / __ \             |__   __(_)
-   | |  _ __   | |  | |_   _ _ __     | |   _ _ __ ___   ___
-   | | | '_ \  | |  | | | | | '__|    | |  | | '_ ` _ \ / _ \
-  _| |_| | | | | |__| | |_| | |       | |  | | | | | | |  __/
- |_____|_| |_|  \____/ \__,_|_|       |_|  |_|_| |_| |_|\___|
-}.freeze
 
   class Tic
     def initialize
@@ -70,7 +60,6 @@ class InOurTime
     load_version
     load_help_maybe
     opening_title
-    display_version
     check_remote
     parse_rss
     sort_titles
@@ -98,7 +87,7 @@ class InOurTime
 
   def version_display_wait
     return if dev_mode?
-    do_events while Time.now - @start_time < 3.0
+    do_events while Time.now - @start_time < 1.5
   end
 
   def iot_print x, col = @text_colour
@@ -140,18 +129,34 @@ class InOurTime
     ENV['IN_OUR_TIME'] == 'development'
   end
 
+  def puts_title colour
+    title =
+    %q{  _____          ____               _______ _
+ |_   _|        / __ \             |__   __(_)
+   | |  _ __   | |  | |_   _ _ __     | |   _ _ __ ___   ___
+   | | | '_ \  | |  | | | | | '__|    | |  | | '_ ` _ \ / _ \
+  _| |_| | | | | |__| | |_| | |       | |  | | | | | | |  __/
+ |_____|_| |_|  \____/ \__,_|_|       |_|  |_|_| |_| |_|\___|
+}
+
+    title.split("\n").map{|l| iot_print(l + "\r\n", colour)} if(window_width > 61)
+    iot_puts("In Our Time\r", colour) unless(window_width > 61)
+    iot_puts
+  end
+
   def opening_title
     return if dev_mode?
-    iot_puts TITLE, :light_green
+    puts_title :light_green
     render
-    sleep 1.5
+    sleep 0.5
     clear_content
-    iot_puts TITLE, @system_colour
+    puts_title @system_colour
+    display_version
     render
   end
 
   def display_version
-    iot_print(' ' * 10 + "Loading ", :light_green) unless ARGV[0] == '-v' || ARGV[0] == '--version'
+    iot_print("Loading ", :light_green) unless ARGV[0] == '-v' || ARGV[0] == '--version'
     iot_puts "In Our Time Player (#{@version})", :light_green
     quit if ARGV[0] == '-v' || ARGV[0] == '--version'
   end
@@ -187,16 +192,43 @@ class InOurTime
     redraw
   end
 
+  def set_height
+    height = window_height
+    while(height -2 % 10 != 0) ; height -=1 ; end
+    height = 10 if height < 10
+    @page_height = height if(@config[:page_height] == :auto)
+    @page_height = @config[:page_height] unless(@config[:page_height] == :auto)
+  end
+
+  def set_width
+    width = window_width
+    while(width % 10 != 0) ; width -=1 ; end
+    width = 20 if width < 20
+    @page_width = width - 1 if(@config[:page_width]  == :auto)
+    @page_width = @config[:page_width] unless(@config[:page_width]  == :auto)
+  end
+
+  def window_height
+    $stdout.winsize.first
+  end
+
+  def window_width
+    $stdout.winsize[1]
+  end
+
+  def set_dimensions
+    set_height
+    set_width
+  end
+
+  def init_line_count
+    @line_count = @page_height
+  end
+
   def do_configs
     init_theme
-    rows, cols = $stdout.winsize
-    while(rows -2 % 10 != 0) ; rows -=1 ; end
-    while(cols % 10 != 0) ; cols -=1 ; end
-    rows = 10 if rows < 10
-    cols = 20 if cols < 20
-    @config[:page_height] = rows if(@config[:page_height] == :auto)
-    @config[:page_width]  = cols if(@config[:page_width]  == :auto)
-    @line_count = @config[:page_height]
+    set_dimensions
+    init_line_count
     @sort = @config[:sort]
   end
 
@@ -338,7 +370,7 @@ class InOurTime
       if st == title
         selected = idx
         idx += 1
-        while idx % @config[:page_height] != 0
+        while idx % @page_height != 0
           idx += 1
         end
         return selected, idx
@@ -461,7 +493,6 @@ class InOurTime
           print_error_and_delay 'Error! Failed to be redirected!'
           render
           @no_play = true
-#          break
         end
         retries += 1
       end
@@ -556,7 +587,7 @@ class InOurTime
   def draw_page
     clear_content
     if @line_count <= @sorted_titles.length
-      @line_count.upto(@line_count + @config[:page_height] - 1) do |idx|
+      @line_count.upto(@line_count + @page_height - 1) do |idx|
         if idx < @sorted_titles.length
           iot_print "> " if(idx == @selected) unless @config[:colour]
           show_count_maybe idx
@@ -566,13 +597,13 @@ class InOurTime
       end
     else
       @line_count = 0
-      0.upto(@config[:page_height] - 1) do |idx|
+      0.upto(@page_height - 1) do |idx|
         iot_print "> ", @selection_colour if(idx == @selected)
         show_count_maybe(idx) unless @sorted_titles[idx].nil?
         iot_puts @sorted_titles[idx], @text_colour unless @sorted_titles[idx].nil?
       end
     end
-    @line_count += @config[:page_height]
+    @line_count += @page_height
     print_playing_maybe
     render
   end
@@ -583,14 +614,14 @@ class InOurTime
       draw_page
     when :previous_page
       if @line_count > 0
-        @line_count -= (@config[:page_height] * 2)
+        @line_count -= (@page_height * 2)
       else
         @line_count = @sorted_titles.length
         @selected = @line_count
       end
       draw_page
     when :same_page
-      @line_count -= @config[:page_height]
+      @line_count -= @page_height
       draw_page
     end
   end
@@ -665,14 +696,14 @@ class InOurTime
   end
 
   def last_line? info, top
-    info[top..-1].length < @config[:page_width]
+    info[top..-1].length < @page_width
   end
 
   def justify info
     pages = [[],[]]
     page = 0
     top = 0
-    bottom = @config[:page_width]
+    bottom = @page_width
     loop do
       shift = top_space info[top..bottom]
       top = top + shift
@@ -682,7 +713,7 @@ class InOurTime
         if idx
           pages[page] << info[top..top + idx]
           page = 1
-          bottom = top + idx + @config[:page_width] + 1
+          bottom = top + idx + @page_width + 1
           top = top + idx + 1
         else
           break if bottom_space? info[bottom]
@@ -695,15 +726,14 @@ class InOurTime
       end
       pages[page] << info[top..bottom]
       top = bottom
-      bottom = bottom + @config[:page_width]
+      bottom = bottom + @page_width
     end
     pages
   end
 
   def print_subtitle prg
     clear
-    TITLE.split("\n").map{|l| iot_print(l + "\r\n", @system_colour)}
-    iot_puts
+    puts_title @system_colour
     justify(prg[:subtitle].gsub(/\s+/, ' '))[0].map{|x| iot_puts x}
     print_program_details prg
     @info = 1
@@ -721,13 +751,13 @@ class InOurTime
     info = prg[:summary].gsub(/\s+/, ' ')
     count = 1
     justify(reformat(info))[0].each do |x|
-      if (count > (@page_count - 1) * @config[:page_height]) &&
-         (count <= @page_count * @config[:page_height])
+      if (count > (@page_count - 1) * @page_height) &&
+         (count <= @page_count * @page_height)
         iot_puts x
       end
       count += 1
     end
-    if count <= @page_count * @config[:page_height] + 1
+    if count <= @page_count * @page_height + 1
       @info = justify(reformat(info))[1] == [] ? -1 : 2
     else
       @page_count += 1
@@ -784,7 +814,7 @@ class InOurTime
   def previous
     @selected -= 1 if @selected > 0
     if @selected >= @line_count -
-                    @config[:page_height]
+                    @page_height
       redraw
     else
       display_list :previous_page
