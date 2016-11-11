@@ -75,7 +75,7 @@ class KeyboardEvents
     when "u",'U'
       @event = :update_key
     when ' '
-      @event = :page_forward
+      @event = :pause
     when "q",'Q', "\u0003", "\u0004"
       @event = :quit_key
     when 'p', 'P'
