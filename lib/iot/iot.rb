@@ -640,21 +640,20 @@ class InOurTime
     []                                     <<
       " In Our Time Player (#{@version})"  <<
       "                                 "  <<
-      " Play/Stop     - X or Enter      "  <<
-      " Previous/Next - Down / Up       "  <<
-      " Next Page     - SPACE           "  <<
-      " Sort          - S               "  <<
-      " Theme Toggle  - T               "  <<
-      " List Top      - L               "  <<
-      " Update        - U               "  <<
-      " Info          - I               "  <<
-      " Help          - H               "  <<
-      " Quit          - Q               "  <<
-      "                                 "  <<
-      " mpg123 Controls:                "  <<
-      "  Pause/Resume - P               "  <<
-      "  Forward Skip - F               "  <<
-      "  Reverse Skip - R               "  <<
+      " Play/Stop      - X or Enter     "  <<
+      " Next/Prev      - Up / Down      "  <<
+      " Next/Prev Page - Right / Left   "  <<
+      " Sort           - S              "  <<
+      " Theme Toggle   - T              "  <<
+      " List Top       - L              "  <<
+      " Update         - U              "  <<
+      " Info           - I              "  <<
+      " Help           - H              "  <<
+      " Quit           - Q              "  <<
+      " mpg123 Control                  "  <<
+      "   Pause/Resume - P / SPACEBAR   "  <<
+      "   Forward Skip - F              "  <<
+      "   Reverse Skip - R              "  <<
       "                                 "  <<
       "Config: #{CONFIG}                "
   end
