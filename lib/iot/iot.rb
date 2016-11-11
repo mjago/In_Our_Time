@@ -361,9 +361,8 @@ class InOurTime
   end
 
   def sort_titles
-    @sorted_titles = []
     @sorted_titles = @programs.collect { |pr| pr[:title] }
-    @sorted_titles.sort! unless @sort == :age
+    @sorted_titles.sort_by!(&:downcase) unless @sort == :age
   end
 
   def sort_selected title
