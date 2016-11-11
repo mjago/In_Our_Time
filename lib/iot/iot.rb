@@ -441,7 +441,7 @@ class InOurTime
     x = DateTime.strptime("Mon, 20 Jun 2016", '%a, %d %b %Y')
     y = DateTime.strptime(date, '%a, %d %b %Y')
     if y < x
-      return '410' unless @playing == 'Abelard and Heloise'
+      return '415' unless @playing == 'Abelard and Heloise'
       '0' if @playing == 'Abelard and Heloise'
     else
       '435'
