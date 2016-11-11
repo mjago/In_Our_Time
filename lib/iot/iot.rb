@@ -402,37 +402,39 @@ class InOurTime
     redraw
   end
 
-  def list_playing
-    title = @sorted_titles[@selected]
-    if title == @playing
-      list_top
-    else
-      list_selected @playing
-    end
-  end
-
-  def list_stopped
-    if @selected == 0
-      title = @sorted_titles[@last_selected || 0]
+  def list_key
+    title = @playing ? @playing : (@sorted_titles[@last_selected || 0])
+    if top_or_end?
       list_selected title
     else
-      list_top
+      @last_selected = @selected
+      list_top_or_end
     end
   end
 
-  def list_key
-    if @playing
-      list_playing
+  def list_top_or_end
+    @list_top = @list_top? nil : true
+    if @list_top
+      list_top
     else
-      list_stopped
+      list_end
     end
+  end
+
+  def top_or_end?
+    @selected == 0 || @selected == @titles_count - 1
   end
 
   def list_top
     @last_selected = @selected
-    @line_count = 0
-    @selected = 0
-    display_list :next_page
+    title = @sorted_titles.first
+    list_selected title
+  end
+
+  def list_end
+    @last_selected = @selected
+    title = @sorted_titles.last
+    list_selected title
   end
 
   def sort_key
@@ -664,7 +666,7 @@ class InOurTime
       " Next/Prev Page - Right / Left   "  <<
       " Sort           - S              "  <<
       " Theme Toggle   - T              "  <<
-      " List Top       - L              "  <<
+      " List Top/End   - L              "  <<
       " Update         - U              "  <<
       " Info           - I              "  <<
       " Help           - H              "  <<
