@@ -53,7 +53,7 @@ class KeyboardEvents
               @event = :previous     if str == "A"
               @event = :next         if str == "B"
               @event = :page_forward if str == "C"
-              @event = :previous     if str == "D"
+              @event = :page_back    if str == "D"
               @mode  = :normal
             else
               break if @event == :no_event

@@ -811,6 +811,12 @@ class InOurTime
     display_list :next_page
   end
 
+  def page_back
+    @selected = @line_count - @page_height * 2
+    @selected = @selected < 0 ? 0 : @selected
+    list_selected @sorted_titles[@selected]
+  end
+
   def previous
     @selected -= 1 if @selected > 0
     if @selected >= @line_count -
@@ -858,10 +864,9 @@ class InOurTime
 
   def do_action ip
     case ip
-    when :pause, :forward, :rewind,
-         :list_key, :page_forward, :previous,
-         :next, :play, :sort_key, :theme_toggle,
-         :update_key, :info, :help, :quit_key
+    when :pause, :forward, :rewind, :list_key, :page_forward, :page_back,
+         :previous, :next, :play, :sort_key, :theme_toggle, :update_key,
+         :info, :help, :quit_key
       self.send ip
     end
   end
