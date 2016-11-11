@@ -323,7 +323,7 @@ class InOurTime
   end
 
   def uniquify_programs
-    @programs = @programs.uniq{|pr| pr[:title]}
+    @programs.uniq!{|pr| pr[:title]}
     return if @programs.uniq.length == @programs.length
     print_error_and_delay "Error ensuring Programs unique!"
     quit 1
@@ -352,6 +352,7 @@ class InOurTime
       end
     end
     uniquify_programs
+    @titles_count = @programs.length
   end
 
   def select_program title
@@ -586,9 +587,9 @@ class InOurTime
 
   def draw_page
     clear_content
-    if @line_count <= @sorted_titles.length
+    if @line_count <= @titles_count
       @line_count.upto(@line_count + @page_height - 1) do |idx|
-        if idx < @sorted_titles.length
+        if idx < @titles_count
           iot_print "> " if(idx == @selected) unless @config[:colour]
           show_count_maybe idx
           iot_puts @sorted_titles[idx], @selection_colour if (idx == @selected)
@@ -616,7 +617,7 @@ class InOurTime
       if @line_count > 0
         @line_count -= (@page_height * 2)
       else
-        @line_count = @sorted_titles.length
+        @line_count = @titles_count
         @selected = @line_count
       end
       draw_page
@@ -806,7 +807,7 @@ class InOurTime
   end
 
   def page_forward
-    return unless @line_count < @sorted_titles.size
+    return unless @line_count < @titles_count
     @selected = @line_count
     display_list :next_page
   end
@@ -828,16 +829,13 @@ class InOurTime
   end
 
   def next
-    return if @selected >= (@sorted_titles.size - 1)
+    return if @selected >= (@titles_count - 1)
     @selected += 1
     if @selected <= @line_count - 1
       redraw
     else
       display_list :next_page
     end
-    p "linecount #{@line_count}"
-    p "selected  #{@selected}"
-    p " number of titles #{@sorted_titles.size}"
   end
 
   def play
