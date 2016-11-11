@@ -828,12 +828,16 @@ class InOurTime
   end
 
   def next
+    return if @selected >= (@sorted_titles.size - 1)
     @selected += 1
     if @selected <= @line_count - 1
       redraw
     else
       display_list :next_page
     end
+    p "linecount #{@line_count}"
+    p "selected  #{@selected}"
+    p " number of titles #{@sorted_titles.size}"
   end
 
   def play
