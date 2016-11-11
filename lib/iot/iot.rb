@@ -806,6 +806,7 @@ class InOurTime
   end
 
   def page_forward
+    return unless @line_count < @sorted_titles.size
     @selected = @line_count
     display_list :next_page
   end
