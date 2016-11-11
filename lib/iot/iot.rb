@@ -51,7 +51,6 @@ class InOurTime
 
   def initialize
     @content = ''
-    @programs = []
     @selected = 0
     clear
     print "\e[?25h"
@@ -313,7 +312,6 @@ class InOurTime
       render
       fetch_uri rss_addresses[count], rss_files[count]
     end
-#    iot_puts
     @config[:last_update] = now
     save_config
   end
@@ -329,27 +327,48 @@ class InOurTime
     quit 1
   end
 
+  def tags
+    ['title', 'itunes:subtitle',
+     'itunes:summary', 'itunes:duration',
+     'pubDate', 'link']
+  end
+
+  def build_program(bin)
+    title = bin[tags[0]].shift.text
+    { title:    title,
+      subtitle: bin[tags[1]].shift.text,
+      summary:  bin[tags[2]].shift.text,
+      duration: bin[tags[3]].shift.text,
+      date:     bin[tags[4]].shift.text[0..15],
+      link:     bin[tags[5]].shift.text,
+      have_locally: have_locally?(title)
+    }
+  end
+
+  def build_programs bin
+    bin['title'].size.times do
+      @programs << build_program(bin)
+    end
+  end
+
+  def item_path name
+    "rss/channel/item/#{name}"
+  end
+
+  def clear_programs
+    @programs = []
+  end
+
   def parse_rss
+    clear_programs
     rss_files.each do |file|
       @doc = Oga.parse_xml(File.open(file))
-      titles    = @doc.xpath('rss/channel/item/title')
-      subtitles = @doc.xpath('rss/channel/item/itunes:subtitle')
-      summarys  = @doc.xpath('rss/channel/item/itunes:summary')
-      durations = @doc.xpath('rss/channel/item/itunes:duration')
-      dates     = @doc.xpath('rss/channel/item/pubDate')
-      links     = @doc.xpath('rss/channel/item/link')
-
-      0.upto(titles.length - 1) do |idx|
-        program = {}
-        program[:title] = titles[idx].text
-        program[:subtitle] = subtitles[idx].text
-        program[:summary]  = summarys[idx].text
-        program[:duration] = durations[idx].text
-        program[:date] = (dates[idx].text)[0..15]
-        program[:link] = links[idx].text
-        program[:have_locally] = have_locally?(titles[idx].text)
-        @programs << program
+      bin = {}
+      tags.each do |tag|
+        bin[tag] = [] if bin[tag].nil?
+        bin[tag] = @doc.xpath(item_path(tag))
       end
+      build_programs(bin)
     end
     uniquify_programs
     @titles_count = @programs.length
