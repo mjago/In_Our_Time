@@ -74,13 +74,14 @@ class InOurTime
   end
 
   def quit code = 0
+    @key.kill if @key
+    @tic.kill if @tic
+    sleep 0.5
     STDIN.echo = true
     STDIN.cooked!
-    clear
+    puts "\n\n#{@error_msg}" if @error_msg
     puts 'Quitting...'
-    clear
-    @key.kill
-    @tic.kill
+    sleep 0.5
     exit code
   end
 
@@ -473,11 +474,16 @@ class InOurTime
     @config[:mpg_player] == :mpg123
   end
 
+  def get_player
+    return 'afplay' if @config[:mpg_player] == :afplay
+    @config[:mpg_player].to_s
+  end
+
   def player_cmd
     if use_mpg123?
       "mpg123 --remote-err -Cqk#{pre_delay}"
     else
-      "afplay"
+      get_player
     end
   end
 
@@ -605,14 +611,36 @@ class InOurTime
     end
   end
 
+  # Cross-platform way of finding an executable in the $PATH.
+  #
+  #   which('ruby') #=> /usr/bin/ruby
+
+  def which(cmd)
+    exts = ENV['PATHEXT'] ? ENV['PATHEXT'].split(';') : ['']
+    ENV['PATH'].split(File::PATH_SEPARATOR).each do |path|
+      exts.each { |ext|
+        exe = File.join(path, "#{cmd}#{ext}")
+        return exe if File.executable?(exe) && !File.directory?(exe)
+      }
+    end
+    return nil
+  end
+
+  def unknown_player cmd
+    @error_msg = "Error: Unknown MPG Player: #{cmd}\r"
+    quit 1
+  end
+
   def run_program prg
     download prg
     unless @no_play
       @playing = prg[:title]
+      player = player_cmd.split(' ').first
+      unknown_player(player) unless which(player)
       window_title prg[:title]
-      @cmd = player_cmd + ' ' + filename_from_title(@playing)
+      cmd = player_cmd + ' ' + filename_from_title(@playing)
       @messages = []
-      @p_out, @p_in, @pid = PTY.spawn(@cmd)
+      @p_out, @p_in, @pid = PTY.spawn(cmd)
     end
     @no_play = nil
   end
