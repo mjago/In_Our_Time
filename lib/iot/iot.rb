@@ -469,9 +469,12 @@ class InOurTime
     end
   end
 
+  def use_mpg123?
+    @config[:mpg_player] == :mpg123
+  end
+
   def player_cmd
-    case @config[:mpg_player]
-    when :mpg123
+    if use_mpg123?
       "mpg123 --remote-err -Cqk#{pre_delay}"
     else
       "afplay"
@@ -605,7 +608,7 @@ class InOurTime
   end
 
   def control_play?
-    @playing && (@config[:mpg_player] == :mpg123)
+    @playing && use_mpg123?
   end
 
   def forward
@@ -616,6 +619,12 @@ class InOurTime
      write_player ";" if control_play?
   end
 
+  def instructions
+    iot_print "Type", @system_colour
+    iot_print " h ", :light_green
+    iot_print "for instructions", @system_colour
+  end
+
   def print_playing_maybe
     if @playing
       iot_print("Playing: ", @count_colour) unless @paused
@@ -623,7 +632,7 @@ class InOurTime
       iot_puts @playing, @selection_colour
     elsif @started.nil?
       @started = true
-      iot_print "? or h for instructions", @text_colour
+      instructions
     end
   end
 
@@ -698,40 +707,78 @@ class InOurTime
   def load_help_maybe
     return unless help_option?
     help
-    quit
+    puts
+    exit 0
   end
 
   def help_screen
     []                                     <<
       " In Our Time Player (#{@version})"  <<
       "                                 "  <<
-      " Play/Stop      - X or Enter     "  <<
+      " Play/Stop      - X / Enter      "  <<
       " Next/Prev      - Up / Down      "  <<
       " Next/Prev Page - Right / Left   "  <<
       " Sort           - S              "  <<
+      " Search         - ?              "  <<
       " Theme Toggle   - T              "  <<
       " List Top/End   - L              "  <<
       " Update         - U              "  <<
       " Info           - I              "  <<
       " Help           - H              "  <<
       " Quit           - Q              "  <<
-      " mpg123 Control                  "  <<
-      "   Pause/Resume - P / SPACEBAR   "  <<
+      " mpg123 Control -                "  <<
+      "   Pause/Resume - P / Spacebar   "  <<
       "   Forward Skip - F              "  <<
       "   Reverse Skip - R              "  <<
       "                                 "  <<
       "Config: #{CONFIG}                "
   end
 
+  def help_partial x,y; help_screen[x..y]   end
+  def help_title; help_partial(0, 1)        end
+  def help_main; help_partial(2, 12)        end
+  def help_cfg;  help_partial(17, -1)       end
+
+  def help_mpg
+    scr = help_partial(13,16)
+    scr[0].rstrip! << ' (enabled)      ' if     use_mpg123?
+    scr[0].rstrip! << ' (disabled)     ' unless use_mpg123?
+    scr
+  end
+
+  def help_colour scr
+    case scr
+    when :mpg
+      return @selection_colour unless use_mpg123?
+      @count_colour if use_mpg123?
+    when :cfg
+      @system_colour
+    else
+      @text_colour
+    end
+  end
+
+  def rstrip_maybe scr
+    self.rstrip unless scr == :mpg
+  end
+
+  def help_render scr
+    txt = send "help_#{scr}"
+    iot_puts txt.map{|x| x}.join("\n\r"), help_colour(scr)
+  end
+
   def print_help
-    iot_puts help_screen.map{|x|x.rstrip}.join("\n\r"), @system_colour
+    help_render :title
+    help_render :main
+    help_render :mpg
+    help_render :cfg
   end
 
   def help
     unless @help
       clear_content
       print_help
-      print_playing_maybe
+      print_playing_maybe unless help_option?
       @help = true
       render
     else
@@ -932,7 +979,7 @@ class InOurTime
     case ip
     when :pause, :forward, :rewind, :list_key, :page_forward, :page_back,
          :previous, :next, :play, :sort_key, :theme_toggle, :update_key,
-         :info, :help, :quit_key
+         :info, :help, :quit_key, :search
       self.send ip
     end
   end
