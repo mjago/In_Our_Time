@@ -822,7 +822,7 @@ class InOurTime
   end
 
   def reformat info
-    ['With','Guests','Producer','Contributors'].map do | x|
+    ['With','Guests','Producer','Contributors'].map do |x|
       [' ', ':'].map do |y|
         [x, x.upcase].map do |z|
           info.gsub!(z + y, "\n" + z + y)
