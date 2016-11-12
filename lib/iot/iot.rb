@@ -487,6 +487,50 @@ class InOurTime
     sleep delay
   end
 
+  def search
+    @key.kill
+    sleep 0.2
+    STDIN.echo = true
+    STDIN.cooked!
+    clear
+    sleep 0.2
+    puts
+    print "Enter Search Term: "
+    search_term = gets.chomp
+    distances = {}
+    @sorted_titles.each do |title|
+      title.split(' ').each do |word|
+        if distances[title].nil?
+          distances[title] = Levenshtein::distance(search_term, word)
+        else
+          distances[title] =
+            distances[title] >
+            Levenshtein::distance(search_term, word.downcase)   ?
+              Levenshtein::distance(search_term, word.downcase) :
+              distances[title]
+        end
+      end
+    end
+    final = distances.sort_by{ |k, v| v }
+    final.shuffle! if search_term == ''
+    5.times do |count|
+      print "#{count + 1}: "
+      p final[count][0]
+    end
+    puts
+    print "Enter Choice: "
+
+    choice = gets.chomp
+    @key = KeyboardEvents.new
+    begin
+      if choice.to_i > 0 && choice.to_i < 6
+        list_selected final[choice.to_i - 1][0]
+        return
+      end
+    end
+    redraw
+  end
+
   def run_program prg
     unless prg[:have_locally]
       retries = 0

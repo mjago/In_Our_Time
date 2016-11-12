@@ -67,36 +67,40 @@ class KeyboardEvents
   end
 
   def match_event str
-    case str
-    when "\e"
-      @mode = :escape
-    when "l",'L'
-      @event = :list_key
-    when "u",'U'
-      @event = :update_key
-    when ' '
-      @event = :pause
-    when "q",'Q', "\u0003", "\u0004"
-      @event = :quit_key
-    when 'p', 'P'
-      @event = :pause
-    when 'f', 'F'
-      @event = :forward
-    when 'r', 'R'
-      @event = :rewind
-    when 's', 'S'
-      @event = :sort_key
-    when 't', 'T'
-      @event = :theme_toggle
-    when 'x', 'X', "\r"
-      @event = :play
-    when 'i', 'I'
-      @event = :info
-    when '?', 'h', 'H'
-      @event = :help
-    else
-      return @event = :no_event
-    end
+    @event =
+      case str
+      when "\e"
+        @mode = :escape
+        :no_event
+      when "l",'L'
+        :list_key
+      when "u",'U'
+        :update_key
+      when ' '
+        :pause
+      when "q",'Q', "\u0003", "\u0004"
+        :quit_key
+      when 'p', 'P'
+        :pause
+      when 'f', 'F'
+        :forward
+      when 'r', 'R'
+        :rewind
+      when 's', 'S'
+        :sort_key
+      when 't', 'T'
+        :theme_toggle
+      when 'x', 'X', "\r"
+        :play
+      when 'i', 'I'
+        :info
+      when 'h', 'H'
+        :help
+      when '?'
+        :search
+      else
+        :no_event
+      end
   end
 end
 
