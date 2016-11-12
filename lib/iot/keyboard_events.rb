@@ -72,30 +72,30 @@ class KeyboardEvents
       when "\e"
         @mode = :escape
         :no_event
-      when "l",'L'
-        :list_key
-      when "u",'U'
-        :update_key
-      when ' '
-        :pause
-      when "q",'Q', "\u0003", "\u0004"
-        :quit_key
-      when 'p', 'P'
-        :pause
+      when 'd', 'D'
+        :download_key
       when 'f', 'F'
         :forward
+      when 'h', 'H'
+        :help
+      when 'i', 'I'
+        :info
+      when 'l', 'L'
+        :list_key
+      when 'p', 'P', ' '
+        :pause
+      when 'q', 'Q', "\u0003", "\u0004"
+        :quit_key
       when 'r', 'R'
         :rewind
       when 's', 'S'
         :sort_key
       when 't', 'T'
         :theme_toggle
+      when 'u', 'U'
+        :update_key
       when 'x', 'X', "\r"
         :play
-      when 'i', 'I'
-        :info
-      when 'h', 'H'
-        :help
       when '?'
         :search
       else

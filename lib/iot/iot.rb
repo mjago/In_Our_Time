@@ -568,42 +568,45 @@ class InOurTime
     display_search_choice results, choice
   end
 
-  def run_program prg
-    unless prg[:have_locally]
-      retries = 0
-      clear_content
-      iot_puts "Fetching #{prg[:title]}", @system_colour
-      render
-      10.times do
-        begin
-          res = Net::HTTP.get_response(URI.parse(prg[:link]))
-        rescue SocketError => e
-          print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
-          render
-          @no_play = true
-          break
-        end
-        case res
-        when Net::HTTPFound
-          iot_puts 'redirecting...', @system_colour
-          render
-          @doc = Oga.parse_xml(res.body)
-          redirect = @doc.css("body p a").text
-          break if download_audio(prg, redirect)
-          sleep 2
-        else
-          print_error_and_delay 'Error! Failed to be redirected!'
-          render
-          @no_play = true
-        end
-        retries += 1
+  def download prg
+    return if prg[:have_locally]
+    retries = 0
+    clear_content
+    iot_puts "Fetching #{prg[:title]}", @system_colour
+    render
+    10.times do
+      begin
+        res = Net::HTTP.get_response(URI.parse(prg[:link]))
+      rescue SocketError => e
+        print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
+        render
+        @no_play = true
+        break
       end
-      if retries >= 10
-        print_error_and_delay "Max retries downloading #{prg[:title]}"
+      case res
+      when Net::HTTPFound
+        iot_puts 'redirecting...', @system_colour
+        render
+        @doc = Oga.parse_xml(res.body)
+        redirect = @doc.css("body p a").text
+        break if download_audio(prg, redirect)
+        sleep 2
+      else
+        print_error_and_delay 'Error! Failed to be redirected!'
         render
         @no_play = true
       end
+      retries += 1
     end
+    if retries >= 10
+      print_error_and_delay "Max retries downloading #{prg[:title]}"
+      render
+      @no_play = true
+    end
+  end
+
+  def run_program prg
+    download prg
     unless @no_play
       @playing = prg[:title]
       window_title prg[:title]
@@ -1004,6 +1007,13 @@ class InOurTime
       display_list :next_page
   end
 
+  def download_key
+    title = @sorted_titles[@selected]
+    pr = select_program title
+    download pr
+    list_selected title
+  end
+
   def quit_key
     kill_audio
     quit
@@ -1013,7 +1023,7 @@ class InOurTime
     case ip
     when :pause, :forward, :rewind, :list_key, :page_forward, :page_back,
          :previous, :next, :play, :sort_key, :theme_toggle, :update_key,
-         :info, :help, :quit_key, :search
+         :info, :help, :quit_key, :search, :download_key
       self.send ip
     end
   end
