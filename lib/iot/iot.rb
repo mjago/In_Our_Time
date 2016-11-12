@@ -490,16 +490,7 @@ class InOurTime
     sleep delay
   end
 
-  def search
-    @key.kill
-    sleep 0.2
-    STDIN.echo = true
-    STDIN.cooked!
-    clear
-    sleep 0.2
-    puts
-    print "Enter Search Term: "
-    search_term = gets.chomp
+  def get_search_results search_term
     distances = {}
     @sorted_titles.each do |title|
       title.split(' ').each do |word|
@@ -514,24 +505,67 @@ class InOurTime
         end
       end
     end
-    final = distances.sort_by{ |k, v| v }
-    final.shuffle! if search_term == ''
+    results = distances.sort_by{ |k, v| v }
+    results.shuffle! if search_term == ''
+    results
+  end
+
+  def print_search_results results
+    puts
+    puts "0: Search Again!"
+    puts
     5.times do |count|
       print "#{count + 1}: "
-      p final[count][0]
+      puts results[count][0]
     end
     puts
-    print "Enter Choice: "
+  end
 
-    choice = gets.chomp
+  def display_search_choice results, choice
     @key = KeyboardEvents.new
     begin
       if choice.to_i > 0 && choice.to_i < 6
-        list_selected final[choice.to_i - 1][0]
+        list_selected results[choice.to_i - 1][0]
         return
       end
     end
     redraw
+  end
+
+  def get_search_term
+    puts "Enter Search Term or just Return for Random:"
+    puts
+    print "Search Term: "
+    gets.chomp
+  end
+
+  def get_search_choice
+    print "Enter Choice: "
+    temp = gets.chomp
+    temp == '0' ? :search_again : temp
+  end
+
+  def search_init
+    @key.kill
+    sleep 0.2
+    STDIN.echo = true
+    STDIN.cooked!
+    clear
+    sleep 0.2
+  end
+
+  def search
+    choice = ''
+    results = []
+    loop do
+      search_init
+      search_term = get_search_term
+      results = get_search_results(search_term)
+      print_search_results(results)
+      choice = get_search_choice
+      break unless choice == :search_again
+    end
+    display_search_choice results, choice
   end
 
   def run_program prg
