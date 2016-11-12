@@ -385,20 +385,28 @@ class InOurTime
     @sorted_titles.sort_by!(&:downcase) unless @sort == :age
   end
 
+  def get_line_count idx
+    idx += 1
+    while idx % @page_height != 0
+      idx += 1
+    end
+    idx
+  end
+
   def sort_selected title
-    @sorted_titles.each_with_index do |st, idx|
+    @sorted_titles.each_with_index do |st, sel|
       if st == title
-        selected = idx
-        idx += 1
-        while idx % @page_height != 0
-          idx += 1
-        end
-        return selected, idx
+        return sel, get_line_count(sel)
       end
     end
   end
 
-  def list_selected title
+  def draw_selected
+    @line_count = get_line_count(@selected)
+    redraw
+  end
+
+  def draw_by_title title
     @selected, @line_count = sort_selected(title)
     redraw
   end
@@ -406,7 +414,7 @@ class InOurTime
   def list_key
     title = @playing ? @playing : (@sorted_titles[@last_selected || 0])
     if top_or_end?
-      list_selected title
+      draw_by_title title
     else
       @last_selected = @selected
       list_top_or_end
@@ -428,20 +436,20 @@ class InOurTime
 
   def list_top
     @last_selected = @selected
-    title = @sorted_titles.first
-    list_selected title
+    @selected = 0
+    draw_selected
   end
 
   def list_end
     @last_selected = @selected
-    title = @sorted_titles.last
-    list_selected title
+    @selected = @titles_count - 1
+    draw_selected
   end
 
   def sort_key
     title = @sorted_titles[@selected]
     toggle_sort
-    list_selected title
+    draw_by_title title
   end
 
   def toggle_sort
@@ -452,7 +460,8 @@ class InOurTime
   end
 
   def redraw
-    display_list :same_page
+    @line_count -= @page_height
+    draw_page
   end
 
   def date
@@ -531,7 +540,7 @@ class InOurTime
     @key = KeyboardEvents.new
     begin
       if choice.to_i > 0 && choice.to_i < 6
-        list_selected results[choice.to_i - 1][0]
+        draw_by_title(results[choice.to_i - 1][0])
         return
       end
     end
@@ -745,24 +754,6 @@ class InOurTime
     @line_count += @page_height
     print_playing_maybe
     render
-  end
-
-  def display_list action
-    case action
-    when :next_page
-      draw_page
-    when :previous_page
-      if @line_count > 0
-        @line_count -= (@page_height * 2)
-      else
-        @line_count = @titles_count
-        @selected = @line_count
-      end
-      draw_page
-    when :same_page
-      @line_count -= @page_height
-      draw_page
-    end
   end
 
   def help_option?
@@ -986,33 +977,25 @@ class InOurTime
   def page_forward
     return unless @line_count < @titles_count
     @selected = @line_count
-    display_list :next_page
+    draw_selected
   end
 
   def page_back
     @selected = @line_count - @page_height * 2
     @selected = @selected < 0 ? 0 : @selected
-    list_selected @sorted_titles[@selected]
+    draw_selected
   end
 
   def previous
-    @selected -= 1 if @selected > 0
-    if @selected >= @line_count -
-                    @page_height
-      redraw
-    else
-      display_list :previous_page
-    end
+    return if @selected <= 0
+    @selected -= 1
+    draw_selected
   end
 
   def next
     return if @selected >= (@titles_count - 1)
     @selected += 1
-    if @selected <= @line_count - 1
-      redraw
-    else
-      display_list :next_page
-    end
+    draw_selected
   end
 
   def play
@@ -1031,16 +1014,15 @@ class InOurTime
       update
       parse_rss
       sort_titles
-      @line_count = 0
       @selected = 0
-      display_list :next_page
+      draw_selected
   end
 
   def download_key
     title = @sorted_titles[@selected]
     pr = select_program title
     download pr
-    list_selected title
+    draw_selected
   end
 
   def quit_key
