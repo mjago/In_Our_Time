@@ -90,9 +90,15 @@ class InOurTime
     do_events while Time.now - @start_time < 1.5
   end
 
-  def iot_print x, col = @text_colour
-    @content << x.colorize(col) if @config[:colour]
-    @content << x           unless @config[:colour]
+  def iot_print x, col = @text_colour, now = false
+    content = ''
+      content << x.colorize(col) if @config[:colour]
+      content << x unless @config[:colour]
+      unless now
+        @content << content
+      else
+        $stdout << content
+      end
   end
 
   def iot_puts x = '', col = @text_colour
@@ -282,8 +288,9 @@ class InOurTime
     case res
     when Net::HTTPOK
       File.open(filename_from_title(program[:title]) , 'wb') do |f|
-        iot_print "writing #{filename_from_title(program[:title])}...", @system_colour
+        iot_puts "writing #{File.basename(filename_from_title(program[:title]))}", @system_colour
         render
+        sleep 0.2
         f.print(res.body)
         iot_puts " written.", @system_colour
         render
@@ -307,10 +314,10 @@ class InOurTime
 
   def update
     clear_content
-    iot_print "Checking rss feeds ", @system_colour
+    clear
+    iot_print "Checking rss feeds ", @system_colour, :now
     local_rss.length.times do |count|
-      iot_print '.', @system_colour
-      render
+      iot_print '.', @system_colour, :now
       fetch_uri rss_addresses[count], rss_files[count]
     end
     @config[:last_update] = now
@@ -999,14 +1006,14 @@ class InOurTime
   end
 
   def play
-    if @playing
-      kill_audio
-    else
+    if(@playing != @sorted_titles[@selected]) || (! @playing)
       kill_audio
       title = @sorted_titles[@selected]
       pr = select_program title
       run_program pr
       redraw
+    else
+      kill_audio
     end
   end
 
