@@ -760,6 +760,7 @@ class InOurTime
       " Theme Toggle   - T              "  <<
       " List Top/End   - L              "  <<
       " Update         - U              "  <<
+      " Download       - D              "  <<
       " Info           - I              "  <<
       " Help           - H              "  <<
       " Quit           - Q              "  <<
@@ -773,11 +774,11 @@ class InOurTime
 
   def help_partial x,y; help_screen[x..y]   end
   def help_title; help_partial(0, 1)        end
-  def help_main; help_partial(2, 12)        end
-  def help_cfg;  help_partial(17, -1)       end
+  def help_main; help_partial(2, 13)        end
+  def help_cfg;  help_partial(18, -1)       end
 
   def help_mpg
-    scr = help_partial(13,16)
+    scr = help_partial(14,17)
     scr[0].rstrip! << ' (enabled)      ' if     use_mpg123?
     scr[0].rstrip! << ' (disabled)     ' unless use_mpg123?
     scr
