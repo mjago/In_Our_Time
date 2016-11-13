@@ -92,7 +92,9 @@ class KeyboardEvents
       when 'r', 'R'
         :rewind
       when 's', 'S'
-        :sort_key
+        :shuffle_key
+      when 'n', 'N'
+        :next_program
       when 't', 'T'
         :theme_toggle
       when 'u', 'U'
