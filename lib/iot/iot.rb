@@ -900,11 +900,18 @@ class InOurTime
   end
 
   def kill_audio
-    return unless @playing
-    @playing = nil
-    return unless @pid.is_a?(Integer)
-    Process.kill('QUIT', @pid)
-    sleep 0.2
+    loop do
+      return unless @playing
+      begin
+        break unless @pid.is_a?(Integer)
+        Process.kill('QUIT', @pid)
+        _, status = Process.wait2 @pid
+        break if status.exited?
+      rescue Errno::ESRCH
+        break
+      end
+      sleep 0.2
+    end
     reset
   end
 
