@@ -92,8 +92,100 @@ class InOurTime
     end
   end
 
+  class PlayTime
+
+    def initialize(fmt, dur)
+      @format = fmt
+      @duration = dur
+#      @duration = 0 #dur
+      @start_time = Time.now
+      update
+    end
+
+    def format(fmt)
+      @format = fmt
+    end
+
+    def changed?
+      ! unchanged?
+    end
+
+    def read
+      store
+      format_time
+    end
+
+    def ended?
+      (@duration + 20) < @seconds
+    end
+
+    def unchanged?
+      (update == stored) || paused?
+    end
+
+    def stored
+      @stored
+    end
+
+    def plural x
+      x == 1 ? '' : 's'
+    end
+
+    def mins
+      @seconds / 60
+    end
+
+    def secs
+      @seconds % 60
+    end
+
+    def format_minutes
+      mins.to_s + ' min' + plural(mins)
+    end
+
+    def format_secs
+      return '' unless @format == :mins_secs
+      ' ' + secs.to_s + ' sec' + plural(secs)
+    end
+
+    def format_time
+      return '' if @format == :none
+      ' (' + format_minutes + format_secs + ')'
+    end
+
+    def update
+      @seconds = (Time.now - @start_time).to_i
+    end
+
+    def store
+      @stored = @seconds
+    end
+
+    def pause
+      @paused = Time.now
+    end
+
+    def paused?
+      @paused
+    end
+
+    def unpause
+      @start_time = @start_time + (Time.now - @paused)
+      @paused = false
+    end
+
+    def forward
+      @start_time -= 1.5
+    end
+
+    def rewind
+      @start_time += 1.5
+    end
+  end
+
   def initialize
-    @content = ''
+    @queued = Array.new
+    @content = String.new
     @selected = 0
     clear
     print "\e[?25h"
