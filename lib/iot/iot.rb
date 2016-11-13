@@ -13,30 +13,73 @@ require_relative 'keyboard_events'
 class InOurTime
   ROOT            = File.expand_path '~/'
   HERE            = File.dirname(__FILE__)
-  CONFIG_DIR      = '.in_our_time'
-  CONFIG_NAME     = 'config.yml'
+  CONFIG_DIR      = '.in_our_time'.freeze
+  CONFIG_NAME     = 'config.yml'.freeze
   IN_OUR_TIME     = File.join ROOT, CONFIG_DIR
   VERSION         = File.join HERE, '..','..','VERSION'
   DEFAULT_CONFIG  = File.join HERE, '..','..',CONFIG_NAME
   CONFIG          = File.join IN_OUR_TIME,CONFIG_NAME
   UPDATE_INTERVAL = 604800
-  AUDIO_DIRECTORY = 'audio'
-  RSS_DIRECTORY   = 'rss'
+  AUDIO_DIRECTORY = 'audio'.freeze
+  RSS_DIRECTORY   = 'rss'.freeze
 
   class Tic
+
     def initialize
       @flag = false
+      init_processes
       run
+    end
+
+    def init_processes
+      @processes =
+        { process: {
+            timeout: 10,
+            value:   0 },
+          playing_time: {
+            timeout: 1,
+            value:   0 },
+          ended: {
+            timeout: 1,
+            value:   0 }
+        }
+    end
+
+    def inc_processes
+      @processes.each { |process| process[:value] += 1 }
     end
 
     def kill
       Thread.kill(@th_tic) if @th_tic
     end
 
+    def timeout? type
+      @processes[type]
+      return unless @processes[type][:value] > @processes[type][:timeout]
+      @processes[type][:value] = 0
+      true
+    end
+
+    def process
+      timeout? :process
+    end
+
+    def playing_time
+      timeout? :playing_time
+    end
+
+    def ended
+      timeout? :ended
+    end
+
     def run
+      Thread.abort_on_exception = true
       @th_tic = Thread.new do
         loop do
-          sleep 1
+          sleep 0.1
+          @processes[:process][:value] += 1
+          @processes[:playing_time][:value] += 1
+          @processes[:ended][:value] += 1
           @flag = true
         end
       end
