@@ -544,12 +544,51 @@ class InOurTime
     redraw
   end
 
+  def title_focus
+    @playing ? @playing : (@sorted_titles[@last_selected || 0])
+  end
+
+  def top_selected
+    @selected == 0
+  end
+
+  def end_selected
+    @selected == @titles_count - 1
+  end
+
+  def top_title_focus
+    title_focus == @sorted_titles.first
+  end
+
+  def end_title_focus
+    title_focus == @sorted_titles.last
+  end
+
+  def top_or_end?
+    top_selected || end_selected
+  end
+
+  def store_selected
+    @last_selected = @selected
+  end
+
+  def top_or_end_title_focus
+    top_title_focus || end_title_focus
+  end
+
   def list_key
-    title = @playing ? @playing : (@sorted_titles[@last_selected || 0])
     if top_or_end?
-      draw_by_title title
+      if top_or_end_title_focus
+        if top_selected
+          list_end
+        else
+          list_top
+        end
+      else
+        draw_by_title title_focus
+      end
     else
-      @last_selected = @selected
+      store_selected
       list_top_or_end
     end
   end
@@ -563,18 +602,12 @@ class InOurTime
     end
   end
 
-  def top_or_end?
-    @selected == 0 || @selected == @titles_count - 1
-  end
-
   def list_top
-    @last_selected = @selected
     @selected = 0
     draw_selected
   end
 
   def list_end
-    @last_selected = @selected
     @selected = @titles_count - 1
     draw_selected
   end
@@ -773,6 +806,10 @@ class InOurTime
     quit 1
   end
 
+  def init_countdown(duration)
+    @play_time = PlayTime.new(:none, duration)
+  end
+
   def run_program prg
     download prg
     unless @no_play
@@ -782,6 +819,7 @@ class InOurTime
       window_title prg[:title]
       cmd = player_cmd + ' ' + filename_from_title(@playing)
       @messages = []
+      init_countdown prg[:duration].to_i
       @p_out, @p_in, @pid = PTY.spawn(cmd)
     end
     @no_play = nil
@@ -810,6 +848,8 @@ class InOurTime
   def pause
     return unless control_play?
     @paused = @paused ? false : true
+    @play_time.pause if @paused
+    @play_time.unpause unless @paused
     write_player " "
     redraw
   end
@@ -819,11 +859,15 @@ class InOurTime
   end
 
   def forward
-     write_player ":" if control_play?
+    return unless control_play?
+    write_player ":"
+    @play_time.forward
   end
 
   def rewind
-     write_player ";" if control_play?
+    return unless control_play?
+    write_player ";"
+    @play_time.rewind
   end
 
   def instructions
@@ -832,11 +876,23 @@ class InOurTime
     iot_print "for instructions", @system_colour
   end
 
+  def print_playing
+    iot_print("Playing: ", @count_colour)
+  end
+
+  def print_paused
+    iot_print("Paused: ", @count_colour)
+  end
+
+  def print_play_time
+    iot_puts(@playing + @play_time.read, @selection_colour)
+  end
+
   def print_playing_maybe
     if @playing
-      iot_print("Playing: ", @count_colour) unless @paused
-      iot_print("Paused: ", @count_colour) if @paused
-      iot_puts @playing, @selection_colour
+      print_playing unless @paused
+      print_paused if @paused
+      print_play_time
     elsif @started.nil?
       @started = true
       instructions
