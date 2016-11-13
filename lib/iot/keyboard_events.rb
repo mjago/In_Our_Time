@@ -36,6 +36,7 @@ class KeyboardEvents
   end
 
   def run
+    Thread.abort_on_exception = true
     @key = Thread.new do
       while @event != :quit_key
         str = ''
