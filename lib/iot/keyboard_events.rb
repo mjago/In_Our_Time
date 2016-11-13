@@ -85,6 +85,8 @@ class KeyboardEvents
         :info
       when 'l', 'L'
         :list_key
+      when 'e', 'E'
+        :enqueue
       when 'p', 'P', ' '
         :pause
       when 'q', 'Q', "\u0003", "\u0004"
