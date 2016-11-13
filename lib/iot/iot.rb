@@ -967,35 +967,42 @@ class InOurTime
     []                                     <<
       " In Our Time Player (#{@version})"  <<
       "                                 "  <<
-      " Play/Stop      - X / Enter      "  <<
-      " Next/Prev      - Up / Down      "  <<
-      " Next/Prev Page - Right / Left   "  <<
-      " Sort           - S              "  <<
-      " Search         - ?              "  <<
-      " Theme Toggle   - T              "  <<
-      " List Top/End   - L              "  <<
-      " Update         - U              "  <<
-      " Download       - D              "  <<
-      " Info           - I              "  <<
-      " Help           - H              "  <<
-      " Quit           - Q              "  <<
-      " mpg123 Control -                "  <<
-      "   Pause/Resume - P / Spacebar   "  <<
-      "   Forward Skip - F              "  <<
-      "   Reverse Skip - R              "  <<
+      " Play/Stop          - Enter/X    "  <<
+      " Next/Prev          - Up/Down    "  <<
+      " Next/Prev Page     - Right/Left "  <<
+      " Arrange            - A          "  <<
+      " Search             - ?          "  <<
+      " Theme Toggle       - T          "  <<
+      " List Top-End-Focus - L          "  <<
+      " Update             - U          "  <<
+      " Download           - D          "  <<
+      " Enqueue            - E          "  <<
+      " Shuffle Play       - S          "  <<
+      " Shuffle Next       - N          "  <<
+      " Info               - I          "  <<
+      " Help               - H          "  <<
+      " Quit               - Q          "  <<
+      " mpg123 Control     -            "  <<
+      "   Pause/Resume     - P/Spacebar "  <<
+      "   Forward Skip     - F          "  <<
+      "   Reverse Skip     - R          "  <<
       "                                 "  <<
       "Config: #{CONFIG}                "
   end
 
-  def help_partial x,y; help_screen[x..y]   end
-  def help_title; help_partial(0, 1)        end
-  def help_main; help_partial(2, 13)        end
-  def help_cfg;  help_partial(18, -1)       end
+  def title_xy; [0,1]                          end
+  def main_xy; [1, help_screen.size - 7]       end
+  def mpg_xy; [help_screen.size - 6, -2]       end
+  def cfg_xy; [help_screen.size - 1, -1]       end
+  def help_partial(x); help_screen[x[0]..x[1]] end
+  def help_title; help_partial(title_xy)       end
+  def help_main; help_partial(main_xy)         end
+  def help_cfg;  help_partial(cfg_xy)          end
 
   def help_mpg
-    scr = help_partial(14,17)
-    scr[0].rstrip! << ' (enabled)      ' if     use_mpg123?
-    scr[0].rstrip! << ' (disabled)     ' unless use_mpg123?
+    scr = help_partial(mpg_xy)
+    scr[0].rstrip! << ' (enabled) ' if     use_mpg123?
+    scr[0].rstrip! << ' (disabled)' unless use_mpg123?
     scr
   end
 
@@ -1024,7 +1031,7 @@ class InOurTime
     help_render :title
     help_render :main
     help_render :mpg
-    help_render :cfg
+#    help_render :cfg
   end
 
   def help
@@ -1155,21 +1162,6 @@ class InOurTime
     render
   end
 
-  def check_process
-    if(@playing && @pid.is_a?(Integer))
-      begin
-        write_player( "\e")
-        if @pid.is_a? Integer
-          Process.kill 0, @pid
-        end
-      rescue Errno::ESRCH
-        reset
-      end
-    else
-      @pid = nil
-    end
-  end
-
   def page_forward
     return unless @line_count < @titles_count
     @selected = @line_count
@@ -1198,7 +1190,7 @@ class InOurTime
     if(@playing != @sorted_titles[@selected]) || (! @playing)
       kill_audio
       title = @sorted_titles[@selected]
-      pr = select_program title
+      pr = select_program(title)
       run_program pr
       redraw
     else
@@ -1221,6 +1213,18 @@ class InOurTime
     draw_selected
   end
 
+  def enqueue
+    @queued << @sorted_titles[@selected]
+  end
+
+  def next_program
+    kill_audio
+  end
+
+  def shuffle_key
+    @queued = @sorted_titles.shuffle
+  end
+
   def quit_key
     kill_audio
     quit
@@ -1230,7 +1234,8 @@ class InOurTime
     case ip
     when :pause, :forward, :rewind, :list_key, :page_forward, :page_back,
          :previous, :next, :play, :sort_key, :theme_toggle, :update_key,
-         :info, :help, :quit_key, :search, :download_key
+         :info, :help, :quit_key, :search, :download_key, :enqueue,
+         :next_program, :shuffle_key
       self.send ip
     end
   end
@@ -1238,6 +1243,57 @@ class InOurTime
   def reset_info_maybe ip
     @info = nil unless ip == :info
     @help = nil unless ip == :help
+  end
+
+  def ping_player
+    write_player("\e")
+  end
+
+  def check_player_process
+    Process.kill 0, @pid
+  end
+
+  def check_process
+    if(@playing && @pid.is_a?(Integer))
+      begin
+        write_player("\e")
+        sleep 0.1
+        if @pid.is_a? Integer
+          check_player_process
+        end
+      rescue Errno::ESRCH
+        kill_audio
+      end
+    else
+      unless @queued.empty?
+        title = @queued.shift
+        run_program(select_program(title))
+#        pr = select_program @queued[0]
+#        download pr
+        draw_by_title title
+      end
+    end
+  end
+
+  def check_finished
+    return unless @playing
+    return unless @play_time.ended?
+    kill_audio
+  end
+
+  def check_tic
+    return unless @tic.toc
+    check_process if @tic.process
+    check_finished if @tic.ended
+    return unless @info.nil?
+    return unless @help.nil?
+    check_playing_time if @tic.playing_time
+   end
+
+  def check_playing_time
+    return unless @playing
+    return unless @play_time.changed?
+    redraw
   end
 
   def run
