@@ -215,7 +215,7 @@ class InOurTime
     STDIN.echo = true
     STDIN.cooked!
     puts "\n\n#{@error_msg}" if @error_msg
-    puts 'Quitting...'
+    puts 'Quitting...'.freeze
     sleep 0.5
     exit code
   end
@@ -226,7 +226,7 @@ class InOurTime
   end
 
   def iot_print x, col = @text_colour, now = false
-    content = ''
+    content = String.new
       content << x.colorize(col) if @config[:colour]
       content << x unless @config[:colour]
       unless now
@@ -267,18 +267,18 @@ class InOurTime
   end
 
   def dev_mode?
-    ENV['IN_OUR_TIME'] == 'development'
+    ENV['IN_OUR_TIME'] == 'development'.freeze
   end
 
   def puts_title colour
     title =
-    %q{  _____          ____               _______ _
+      %q{  _____          ____               _______ _
  |_   _|        / __ \             |__   __(_)
    | |  _ __   | |  | |_   _ _ __     | |   _ _ __ ___   ___
    | | | '_ \  | |  | | | | | '__|    | |  | | '_ ` _ \ / _ \
   _| |_| | | | | |__| | |_| | |       | |  | | | | | | |  __/
  |_____|_| |_|  \____/ \__,_|_|       |_|  |_|_| |_| |_|\___|
-}
+}.freeze
 
     title.split("\n").map{|l| iot_print(l + "\r\n", colour)} if(window_width > 61)
     iot_puts("In Our Time\r", colour) unless(window_width > 61)
@@ -384,25 +384,16 @@ class InOurTime
   end
 
   def rss_addresses
+    filename = "/episodes/downloads.rss"
     host = 'http://www.bbc.co.uk/programmes'
-    [ "/b006qykl/episodes/downloads.rss",
-      "/p01drwny/episodes/downloads.rss",
-      "/p01dh5yg/episodes/downloads.rss",
-      "/p01f0vzr/episodes/downloads.rss",
-      "/p01gvqlg/episodes/downloads.rss",
-      "/p01gyd7j/episodes/downloads.rss"
-    ].collect{|page| host + page}
+    [ "/b006qykl", "/p01drwny", "/p01dh5yg",
+      "/p01f0vzr", "/p01gvqlg", "/p01gyd7j"
+    ].collect{|page| host + page + filename}
   end
 
   def local_rss
-    [
-      "culture.rss",
-      "history.rss",
-      "in_our_time.rss",
-      "philosophy.rss",
-      "religion.rss",
-      "science.rss"
-    ]
+    [ "culture.rss", "history.rss", "in_our_time.rss",
+      "philosophy.rss", "religion.rss", "science.rss"]
   end
 
   def fetch_uri uri, file
