@@ -807,7 +807,7 @@ class InOurTime
   end
 
   def init_countdown(duration)
-    @play_time = PlayTime.new(:none, duration)
+    @play_time = PlayTime.new(:mins_secs, duration)
   end
 
   def run_program prg
