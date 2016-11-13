@@ -73,6 +73,8 @@ class KeyboardEvents
       when "\e"
         @mode = :escape
         :no_event
+      when 'a', 'A'
+        :sort_key
       when 'd', 'D'
         :download_key
       when 'f', 'F'
