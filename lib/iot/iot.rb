@@ -1306,7 +1306,7 @@ class InOurTime
       loop do
         ip = @key.read
         break unless ip == :no_event
-        check_process if @tic.toc
+        check_tic
         do_events
       end
       reset_info_maybe ip
