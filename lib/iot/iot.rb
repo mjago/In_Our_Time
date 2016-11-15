@@ -335,7 +335,7 @@ class InOurTime
 
   def set_height
     height = window_height
-    while(height -2 % 10 != 0) ; height -=1 ; end
+    while(((height - 2) % 10) != 0) ; height -= 1 ; end
     height = 10 if height < 10
     @page_height = height if(@config[:page_height] == :auto)
     @page_height = @config[:page_height] unless(@config[:page_height] == :auto)
@@ -811,11 +811,10 @@ class InOurTime
   end
 
   def run_program prg
-    download prg
     unless @no_play
       @playing = prg[:title]
       player = player_cmd.split(' ').first
-      unknown_player(player) unless which(player)
+      unknown_player(player) unless which(File.basename player)
       window_title prg[:title]
       cmd = player_cmd + ' ' + filename_from_title(@playing)
       @messages = []
@@ -958,6 +957,7 @@ class InOurTime
 
   def load_help_maybe
     return unless help_option?
+    @config[:colour] = false
     help
     puts
     exit 0
@@ -965,7 +965,7 @@ class InOurTime
 
   def help_screen
     []                                     <<
-      " In Our Time Player (#{@version})"  <<
+      " In Our Time Payer (#{@version})"  <<
       "                                 "  <<
       " Play/Stop          - Enter/X    "  <<
       " Next/Prev          - Up/Down    "  <<
@@ -990,7 +990,7 @@ class InOurTime
       "Config: #{CONFIG}                "
   end
 
-  def title_xy; [0,1]                          end
+  def title_xy; [0,0]                          end
   def main_xy; [1, help_screen.size - 7]       end
   def mpg_xy; [help_screen.size - 6, -2]       end
   def cfg_xy; [help_screen.size - 1, -1]       end
@@ -1001,8 +1001,8 @@ class InOurTime
 
   def help_mpg
     scr = help_partial(mpg_xy)
-    scr[0].rstrip! << ' (enabled) ' if     use_mpg123?
-    scr[0].rstrip! << ' (disabled)' unless use_mpg123?
+    scr[0].rstrip! << ' (enabled)  ' if     use_mpg123?
+    scr[0].rstrip! << ' (disabled) ' unless use_mpg123?
     scr
   end
 
@@ -1012,6 +1012,8 @@ class InOurTime
       return @selection_colour unless use_mpg123?
       @count_colour if use_mpg123?
     when :cfg
+      @system_colour
+    when :title
       @system_colour
     else
       @text_colour
@@ -1187,23 +1189,23 @@ class InOurTime
   end
 
   def play
-    if(@playing != @sorted_titles[@selected]) || (! @playing)
-      kill_audio
-      title = @sorted_titles[@selected]
-      pr = select_program(title)
-      run_program pr
-      redraw
-    else
-      kill_audio
-    end
+    title = @sorted_titles[@selected]
+    playing = @playing
+    prg = select_program(title)
+    download prg unless playing
+    download prg if playing && (playing != title)
+    kill_audio
+    return unless (! playing) || (playing != title)
+    run_program prg
+    redraw
   end
 
   def update_key
-      update
-      parse_rss
-      sort_titles
-      @selected = 0
-      draw_selected
+    update
+    parse_rss
+    sort_titles
+    @selected = 0
+    draw_selected
   end
 
   def download_key
@@ -1267,9 +1269,9 @@ class InOurTime
     else
       unless @queued.empty?
         title = @queued.shift
-        run_program(select_program(title))
-#        pr = select_program @queued[0]
-#        download pr
+        prg = select_program(title)
+        download prg
+        run_program(prg)
         draw_by_title title
       end
     end
