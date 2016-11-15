@@ -236,9 +236,9 @@ class InOurTime
       end
   end
 
-  def iot_puts x = '', col = @text_colour
-    iot_print x, col
-    iot_print "\n\r"
+  def iot_puts x = '', col = @text_colour, now = false
+    iot_print x, col, now
+    iot_print "\n\r", now
   end
 
   def clear_content
@@ -714,7 +714,8 @@ class InOurTime
   end
 
   def get_search_term
-    puts "Enter Search Term or just Return for Random:"
+    iot_puts "Enter Search Term or just Return for Random:", @system_colour, :now
+    puts
     puts
     print "Search Term: "
     gets.chomp
