@@ -722,7 +722,7 @@ class InOurTime
 
   def get_search_choice
     print "Enter Choice: "
-    temp = gets.chomp
+    temp = $stdin.getch.chomp
     temp == '0' ? :search_again : temp
   end
 
