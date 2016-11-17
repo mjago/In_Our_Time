@@ -665,7 +665,7 @@ class InOurTime
 
   def player_cmd
     if use_mpg123?
-      "mpg123 -v -Ck#{pre_delay}"
+      "mpg123 -Cvk#{pre_delay}"
     else
       get_player
     end
