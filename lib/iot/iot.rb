@@ -472,14 +472,14 @@ class InOurTime
   end
 
   def build_program(bin)
-    tgs = tags
-    title = bin[tgs.shift].shift.text
+    title = bin['title'].shift.text
     { title:    title,
-      subtitle: bin[tgs.shift].shift.text,
-      summary:  bin[tgs.shift].shift.text,
-      duration: bin[tgs.shift].shift.text,
-      date:     bin[tgs.shift].shift.text[0..15],
-      link:     bin[tgs.shift].shift.text,
+      subtitle: bin['itunes:subtitle'].shift.text,
+      summary:  bin['itunes:summary'].shift.text,
+      duration: bin['itunes:duration'].shift.text,
+      date:     bin['pubDate'].shift.text[0..15],
+      link:     bin['link'].shift.text,
+      url:      bin['url'].shift,
       have_locally: have_locally?(title)
     }
   end
@@ -506,6 +506,10 @@ class InOurTime
       tags.each do |tag|
         bin[tag] = [] if bin[tag].nil?
         bin[tag] = @doc.xpath(item_path(tag))
+      end
+      bin['url'] = []
+      @doc.xpath(item_path('enclosure')).each do |x|
+        bin['url'] << x.get('url')
       end
       build_programs(bin)
     end
@@ -766,7 +770,7 @@ class InOurTime
     render
     10.times do
       begin
-        res = Net::HTTP.get_response(URI.parse(prg[:link]))
+        res = Net::HTTP.get_response(URI.parse(prg[:url]))
       rescue SocketError => e
         print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
         render
