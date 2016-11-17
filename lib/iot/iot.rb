@@ -26,6 +26,7 @@ class InOurTime
   class Tic
 
     def initialize
+      Thread.abort_on_exception = true
       @flag = false
       init_processes
       run
@@ -186,6 +187,7 @@ class InOurTime
   end
 
   def initialize
+    Thread.abort_on_exception = true
     @queued = Array.new
     @content = String.new
     @selected = 0
