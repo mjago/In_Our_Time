@@ -1314,26 +1314,25 @@ class InOurTime
   end
 
   def check_process
-    if @playing
-      if @pid.is_a?(Integer)
-        begin
-          write_player("\e")
-          sleep 0.1
-          if @pid.is_a? Integer
-            check_player_process
-          end
-        rescue Errno::ESRCH
-          kill_audio
+    return unless @playing
+    if @pid.is_a?(Integer)
+      begin
+        write_player("\e")
+        sleep 0.1
+        if @pid.is_a? Integer
+          check_player_process
         end
-      else
+      rescue Errno::ESRCH
         kill_audio
-        unless @queued.empty?
-          title = @queued.shift
-          prg = select_program(title)
-          download prg
-          run_program(prg)
-          draw_by_title title
-        end
+      end
+    else
+      kill_audio
+      unless @queued.empty?
+        title = @queued.shift
+        prg = select_program(title)
+        download prg
+        run_program(prg)
+        draw_by_title title
       end
     end
   end
