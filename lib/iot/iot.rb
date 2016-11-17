@@ -1090,7 +1090,6 @@ class InOurTime
     unless @help
       clear_content
       print_help
-      print_playing_maybe unless help_option?
       @help = true
       render
     else
