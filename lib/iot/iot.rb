@@ -696,11 +696,14 @@ class InOurTime
 
   def print_search_results results
     puts
-    puts "0: Search Again!"
+    iot_print "0:", @count_sel_colour, :now
+    iot_puts " Search Again!", @system_colour, :now
+    puts
     puts
     5.times do |count|
-      print "#{count + 1}: "
-      puts results[count][0]
+      iot_print "#{count + 1}:", @count_sel_colour, :now
+      iot_print " #{results[count][0]}", @system_colour, :now
+      puts
     end
     puts
   end
