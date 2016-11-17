@@ -829,32 +829,36 @@ class InOurTime
         sleep 1
         count = 0
         loop do
-          x = p_out.getc unless p_out.eof?
-          if(((count >= 6) && (count <= 10)) ||
-            ((count > 15) && (count < 21))   )
-            buf << x
-            count += 1
-          elsif(((count == 0)  && (x == 'T'))  ||
-                ((count == 1)  && (x == 'i'))  ||
-                ((count == 2)  && (x == 'm'))  ||
-                ((count == 3)  && (x == 'e'))  ||
-                ((count == 4)  && (x == ':'))  ||
-                ((count == 5)  && (x == ' '))  ||
-                ((count >= 12) && (count <= 15)))
-            count += 1
-          elsif count == 11
-            @running_time = buf
-            buf = ''
-            count += 1
-          elsif count == 21
-            @remaining_time = buf
-            buf = ''
-            count = 0
-            sleep 0.3
-            p_out.flush
+          unless use_mpg123?
+            sleep 1
           else
-            count = 0
-            sleep 0.001
+            x = p_out.getc unless p_out.eof?
+            if(((count >= 6) && (count <= 10)) ||
+               ((count > 15) && (count < 21))   )
+              buf << x
+              count += 1
+            elsif(((count == 0)  && (x == 'T'))  ||
+                  ((count == 1)  && (x == 'i'))  ||
+                  ((count == 2)  && (x == 'm'))  ||
+                  ((count == 3)  && (x == 'e'))  ||
+                  ((count == 4)  && (x == ':'))  ||
+                  ((count == 5)  && (x == ' '))  ||
+                  ((count >= 12) && (count <= 15)))
+              count += 1
+            elsif count == 11
+              @running_time = buf
+              buf = ''
+              count += 1
+            elsif count == 21
+              @remaining_time = buf
+              buf = ''
+              count = 0
+              sleep 0.3
+              p_out.flush
+            else
+              count = 0
+              sleep 0.001
+            end
           end
         end
       end
