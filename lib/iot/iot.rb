@@ -34,7 +34,7 @@ class InOurTime
     def init_processes
       @processes =
         { process: {
-            timeout: 10,
+            timeout: 5,
             value:   0 },
           playing_time: {
             timeout: 1,
@@ -76,7 +76,7 @@ class InOurTime
       Thread.abort_on_exception = true
       @th_tic = Thread.new do
         loop do
-          sleep 0.1
+          sleep 0.2
           @processes[:process][:value] += 1
           @processes[:playing_time][:value] += 1
           @processes[:ended][:value] += 1
@@ -123,6 +123,10 @@ class InOurTime
       (update == stored) || paused?
     end
 
+    def store
+      @stored = @seconds
+    end
+
     def stored
       @stored
     end
@@ -139,26 +143,25 @@ class InOurTime
       @seconds % 60
     end
 
+    def format x
+      x < 10 ? '0' + x.to_s : x.to_s
+    end
+
     def format_minutes
-      mins.to_s + ' min' + plural(mins)
+      format mins
     end
 
     def format_secs
-      return '' unless @format == :mins_secs
-      ' ' + secs.to_s + ' sec' + plural(secs)
+      format secs
     end
 
     def format_time
       return '' if @format == :none
-      ' (' + format_minutes + format_secs + ')'
+      ' (' + format_minutes + ':' + format_secs + ')'
     end
 
     def update
       @seconds = (Time.now - @start_time).to_i
-    end
-
-    def store
-      @stored = @seconds
     end
 
     def pause
@@ -468,13 +471,14 @@ class InOurTime
   end
 
   def build_program(bin)
-    title = bin[tags[0]].shift.text
+    tgs = tags
+    title = bin[tgs.shift].shift.text
     { title:    title,
-      subtitle: bin[tags[1]].shift.text,
-      summary:  bin[tags[2]].shift.text,
-      duration: bin[tags[3]].shift.text,
-      date:     bin[tags[4]].shift.text[0..15],
-      link:     bin[tags[5]].shift.text,
+      subtitle: bin[tgs.shift].shift.text,
+      summary:  bin[tgs.shift].shift.text,
+      duration: bin[tgs.shift].shift.text,
+      date:     bin[tgs.shift].shift.text[0..15],
+      link:     bin[tgs.shift].shift.text,
       have_locally: have_locally?(title)
     }
   end
@@ -656,7 +660,7 @@ class InOurTime
 
   def player_cmd
     if use_mpg123?
-      "mpg123 --remote-err -Cqk#{pre_delay}"
+      "mpg123 -v -Ck#{pre_delay}"
     else
       get_player
     end
@@ -808,7 +812,7 @@ class InOurTime
   end
 
   def init_countdown(duration)
-    @play_time = PlayTime.new(:mins_secs, duration)
+    @play_time = PlayTime.new(:mins_secs, duration) unless use_mpg123?
   end
 
   def run_program prg
@@ -820,7 +824,41 @@ class InOurTime
       cmd = player_cmd + ' ' + filename_from_title(@playing)
       @messages = []
       init_countdown prg[:duration].to_i
-      @p_out, @p_in, @pid = PTY.spawn(cmd)
+      @player_th = Thread.new do
+        buf = ''
+        p_out, @p_in, @pid = PTY.spawn(cmd)
+        sleep 1
+        count = 0
+        loop do
+          x = p_out.getc unless p_out.eof?
+          if(((count >= 6) && (count <= 10)) ||
+            ((count > 15) && (count < 21))   )
+            buf << x
+            count += 1
+          elsif(((count == 0)  && (x == 'T'))  ||
+                ((count == 1)  && (x == 'i'))  ||
+                ((count == 2)  && (x == 'm'))  ||
+                ((count == 3)  && (x == 'e'))  ||
+                ((count == 4)  && (x == ':'))  ||
+                ((count == 5)  && (x == ' '))  ||
+                ((count >= 12) && (count <= 15)))
+            count += 1
+          elsif count == 11
+            @running_time = buf
+            buf = ''
+            count += 1
+          elsif count == 21
+            @remaining_time = buf
+            buf = ''
+            count = 0
+            sleep 0.3
+            p_out.flush
+          else
+            count = 0
+            sleep 0.001
+          end
+        end
+      end
     end
     @no_play = nil
   end
@@ -848,8 +886,8 @@ class InOurTime
   def pause
     return unless control_play?
     @paused = @paused ? false : true
-    @play_time.pause if @paused
-    @play_time.unpause unless @paused
+    @play_time.pause if @paused unless use_mpg123?
+    @play_time.unpause unless @paused unless use_mpg123?
     write_player " "
     redraw
   end
@@ -861,13 +899,13 @@ class InOurTime
   def forward
     return unless control_play?
     write_player ":"
-    @play_time.forward
+    @play_time.forward unless use_mpg123?
   end
 
   def rewind
     return unless control_play?
     write_player ";"
-    @play_time.rewind
+    @play_time.rewind unless use_mpg123?
   end
 
   def instructions
@@ -885,7 +923,14 @@ class InOurTime
   end
 
   def print_play_time
-    iot_puts(@playing + @play_time.read, @selection_colour)
+    if use_mpg123?
+      iot_print(@playing, @selection_colour)
+      iot_print(' (' + @running_time, @selection_colour) unless @running_time.nil?
+      iot_print(' / ' + @remaining_time, @selection_colour) unless @remaining_time.nil?
+      iot_puts(')', @selection_colour) unless @running_time.nil?
+    else
+      iot_puts(@playing + @play_time.read, @selection_colour)
+    end
   end
 
   def print_playing_maybe
@@ -987,7 +1032,6 @@ class InOurTime
       "   Pause/Resume     - P/Spacebar "  <<
       "   Forward Skip     - F          "  <<
       "   Reverse Skip     - R          "  <<
-      "                                 "  <<
       "Config: #{CONFIG}                "
   end
 
@@ -1280,6 +1324,7 @@ class InOurTime
 
   def check_finished
     return unless @playing
+    return if use_mpg123?
     return unless @play_time.ended?
     kill_audio
   end
@@ -1295,7 +1340,7 @@ class InOurTime
 
   def check_playing_time
     return unless @playing
-    return unless @play_time.changed?
+    return unless @play_time.changed? unless use_mpg123?
     redraw
   end
 
