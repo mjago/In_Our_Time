@@ -882,6 +882,7 @@ class InOurTime
     begin
       @p_in.puts str
     rescue Errno::EIO
+      kill_audio
       reset
     end
   end
@@ -949,6 +950,7 @@ class InOurTime
 
   def kill_audio
     loop do
+      Thread.kill(@player_th) if @player_th
       return unless @playing
       begin
         break unless @pid.is_a?(Integer)
@@ -1304,30 +1306,33 @@ class InOurTime
   end
 
   def check_process
-    if(@playing && @pid.is_a?(Integer))
-      begin
-        write_player("\e")
-        sleep 0.1
-        if @pid.is_a? Integer
-          check_player_process
+    if @playing
+      if @pid.is_a?(Integer)
+        begin
+          write_player("\e")
+          sleep 0.1
+          if @pid.is_a? Integer
+            check_player_process
+          end
+        rescue Errno::ESRCH
+          kill_audio
         end
-      rescue Errno::ESRCH
+      else
         kill_audio
-      end
-    else
-      unless @queued.empty?
-        title = @queued.shift
-        prg = select_program(title)
-        download prg
-        run_program(prg)
-        draw_by_title title
+        unless @queued.empty?
+          title = @queued.shift
+          prg = select_program(title)
+          download prg
+          run_program(prg)
+          draw_by_title title
+        end
       end
     end
   end
 
   def check_finished
-    return unless @playing
     return if use_mpg123?
+    return unless @playing
     return unless @play_time.ended?
     kill_audio
   end
