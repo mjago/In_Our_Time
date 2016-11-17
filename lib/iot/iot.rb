@@ -94,16 +94,10 @@ class InOurTime
 
   class PlayTime
 
-    def initialize(fmt, dur)
-      @format = fmt
+    def initialize(dur)
       @duration = dur
-#      @duration = 0 #dur
       @start_time = Time.now
       update
-    end
-
-    def format(fmt)
-      @format = fmt
     end
 
     def changed?
@@ -155,9 +149,14 @@ class InOurTime
       format secs
     end
 
+    def format_remaining_time
+      secs = @duration - @seconds
+      format(secs/60) + ':' + format(secs%60)
+    end
+
     def format_time
-      return '' if @format == :none
-      ' (' + format_minutes + ':' + format_secs + ')'
+      ' (' + format_minutes + ':' + format_secs +
+      ' / '  + format_remaining_time + ')'
     end
 
     def update
@@ -812,7 +811,7 @@ class InOurTime
   end
 
   def init_countdown(duration)
-    @play_time = PlayTime.new(:mins_secs, duration) unless use_mpg123?
+    @play_time = PlayTime.new(duration) unless use_mpg123?
   end
 
   def run_program prg
