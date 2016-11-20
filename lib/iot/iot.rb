@@ -20,11 +20,11 @@ class InOurTime
   DEFAULT_CONFIG  = File.join HERE, '..','..',CONFIG_NAME
   CONFIG          = File.join IN_OUR_TIME,CONFIG_NAME
   UPDATE_INTERVAL = 604800
-  AUDIO_DIRECTORY = 'audio'.freeze
+  AUDIO_DIRECTORY = '../../../../Volumes/UNTITLED/.in_our_time/audio'.freeze
+  #  AUDIO_DIRECTORY = 'audio'.freeze
   RSS_DIRECTORY   = 'rss'.freeze
 
   class Tic
-
     def initialize
       Thread.abort_on_exception = true
       @flag = false
@@ -94,7 +94,6 @@ class InOurTime
   end
 
   class PlayTime
-
     def initialize(dur)
       @duration = dur
       @start_time = Time.now
@@ -349,8 +348,8 @@ class InOurTime
     width = window_width
     while(width % 10 != 0) ; width -=1 ; end
     width = 20 if width < 20
-    @page_width = width - 1 if(@config[:page_width]  == :auto)
-    @page_width = @config[:page_width] unless(@config[:page_width]  == :auto)
+    @page_width = width - 1 if(@config[:page_width] == :auto)
+    @page_width = @config[:page_width] unless(@config[:page_width] == :auto)
   end
 
   def window_height
@@ -685,12 +684,12 @@ class InOurTime
     @sorted_titles.each do |title|
       title.split(' ').each do |word|
         if distances[title].nil?
-          distances[title] = Levenshtein::distance(search_term, word)
+          distances[title] = Levenshtein.distance(search_term, word)
         else
           distances[title] =
             distances[title] >
-            Levenshtein::distance(search_term, word.downcase)   ?
-              Levenshtein::distance(search_term, word.downcase) :
+            Levenshtein.distance(search_term, word.downcase)   ?
+              Levenshtein.distance(search_term, word.downcase) :
               distances[title]
         end
       end
@@ -792,11 +791,10 @@ class InOurTime
       end
       retries += 1
     end
-    if retries >= 10
-      print_error_and_delay "Max retries downloading #{prg[:title]}"
-      render
-      @no_play = true
-    end
+    return if retries < 10
+    print_error_and_delay "Max retries downloading #{prg[:title]}"
+    render
+    @no_play = true
   end
 
   # Cross-platform way of finding an executable in the $PATH.
@@ -843,7 +841,7 @@ class InOurTime
           else
             x = p_out.getc unless p_out.eof?
             if(((count >= 6) && (count <= 10)) ||
-               ((count > 15) && (count < 21))   )
+               ((count > 15) && (count < 21))  )
               buf << x
               count += 1
             elsif(((count == 0)  && (x == 'T'))  ||
@@ -1025,7 +1023,7 @@ class InOurTime
 
   def help_screen
     []                                     <<
-      " In Our Time Payer (#{@version})"  <<
+      " In Our Time Payer (#{@version}) "  <<
       "                                 "  <<
       " Play/Stop          - Enter/X    "  <<
       " Next/Prev          - Up/Down    "  <<
@@ -1092,7 +1090,7 @@ class InOurTime
     help_render :title
     help_render :main
     help_render :mpg
-#    help_render :cfg
+    #    help_render :cfg
   end
 
   def help
@@ -1346,8 +1344,8 @@ class InOurTime
 
   def check_tic
     return unless @tic.toc
-    check_process if @tic.process
-    check_finished if @tic.ended
+    #    check_process if @tic.process
+    #    check_finished if @tic.ended
     return unless @info.nil?
     return unless @help.nil?
     check_playing_time if @tic.playing_time
