@@ -83,8 +83,8 @@ class KeyboardEvents
         :help
       when 'i', 'I'
         :info
-      when 'l', 'L'
-        :list_key
+      when 'j', 'J'
+        :jump_key
       when 'e', 'E'
         :enqueue
       when 'p', 'P', ' '

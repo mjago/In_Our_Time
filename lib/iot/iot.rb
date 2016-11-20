@@ -584,7 +584,7 @@ class InOurTime
     top_title_focus || end_title_focus
   end
 
-  def list_key
+  def jump_key
     if top_or_end?
       if top_or_end_title_focus
         if top_selected
@@ -1290,7 +1290,7 @@ class InOurTime
 
   def do_action ip
     case ip
-    when :pause, :forward, :rewind, :list_key, :page_forward, :page_back,
+    when :pause, :forward, :rewind, :jump_key, :page_forward, :page_back,
          :previous, :next, :play, :sort_key, :theme_toggle, :update_key,
          :info, :help, :quit_key, :search, :download_key, :enqueue,
          :next_program, :shuffle_key
