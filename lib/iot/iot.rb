@@ -1031,7 +1031,7 @@ class InOurTime
       " Arrange            - A          "  <<
       " Search             - ?          "  <<
       " Theme Toggle       - T          "  <<
-      " List Top-End-Focus - L          "  <<
+      " Jump Around List   - J          "  <<
       " Update             - U          "  <<
       " Download           - D          "  <<
       " Enqueue            - E          "  <<
