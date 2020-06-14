@@ -641,7 +641,7 @@ class InOurTime
   end
 
   def use_mpg123?
-    @config[:mpg_player] == :mpg123
+    (@config[:mpg_player] == :mpg123) | (@config[:mpg_player] == :mpg321)
   end
 
   def get_player
