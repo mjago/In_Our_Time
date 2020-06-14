@@ -2,7 +2,7 @@
 :last_update: 1474712963
 :update_interval: 604800
 :colour: true
-:mpg_player: :afplay
+:mpg_player: :mpg321
 :sort: :age
 :show_count: true
 :page_height: 20

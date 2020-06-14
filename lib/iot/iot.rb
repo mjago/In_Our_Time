@@ -20,7 +20,7 @@ class InOurTime
   DEFAULT_CONFIG  = File.join HERE, '..','..',CONFIG_NAME
   CONFIG          = File.join IN_OUR_TIME,CONFIG_NAME
   UPDATE_INTERVAL = 604800
-  AUDIO_DIRECTORY = '../../../../Volumes/UNTITLED/.in_our_time/audio'.freeze
+  AUDIO_DIRECTORY = 'audio'.freeze
   #  AUDIO_DIRECTORY = 'audio'.freeze
   RSS_DIRECTORY   = 'rss'.freeze
 
@@ -292,7 +292,7 @@ class InOurTime
     return if dev_mode?
     puts_title :light_green
     render
-    sleep 0.5
+    sleep 1
     clear_content
     puts_title @system_colour
     display_version
@@ -412,24 +412,11 @@ class InOurTime
     File.join IN_OUR_TIME, AUDIO_DIRECTORY, temp.downcase
   end
 
-  def download_audio(program, addr)
-    res = Net::HTTP.get_response(URI.parse(addr))
-    case res
-    when Net::HTTPOK
-      File.open(filename_from_title(program[:title]) , 'wb') do |f|
-        iot_puts "writing #{File.basename(filename_from_title(program[:title]))}", @system_colour
-        render
-        sleep 0.2
-        f.print(res.body)
-        iot_puts " written.", @system_colour
-        render
-      end
-      program[:have_locally] = true
-    else
-      iot_puts 'Download failed. Retrying...', @system_colour
-      render
-      nil
+  def save_audio(program, audio)
+    File.open(filename_from_title(program[:title]) , 'wb') do |f|
+      f.print(audio.body)
     end
+    program[:have_locally] = true
   end
 
   def have_locally? title
@@ -765,25 +752,26 @@ class InOurTime
     return if prg[:have_locally]
     retries = 0
     clear_content
-    iot_puts "Fetching #{prg[:title]}", @system_colour
-    render
+    begin
+      puts prg[:url]
+      sleep 1
+      uri = URI.parse(prg[:url])
+      res = Net::HTTP.get_response(uri)
+    rescue SocketError => e
+      print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
+      render
+      @no_play = true
+    end
     10.times do
-      begin
-        res = Net::HTTP.get_response(URI.parse(prg[:url]))
-      rescue SocketError => e
-        print_error_and_delay "Error: Failed to connect to Internet! (#{e.class})"
-        render
-        @no_play = true
-        break
-      end
       case res
-      when Net::HTTPFound
-        iot_puts 'redirecting...', @system_colour
-        render
-        @doc = Oga.parse_xml(res.body)
-        redirect = @doc.css("body p a").text
-        break if download_audio(prg, redirect)
-        sleep 2
+      when Net::HTTPSuccess
+        save_audio(prg, res)
+        return
+
+      when Net::HTTPRedirection
+        location = res['location']
+        uri = URI.parse(location)
+        res = Net::HTTP.get_response(uri)
       else
         print_error_and_delay 'Error! Failed to be redirected!'
         render
@@ -791,6 +779,7 @@ class InOurTime
       end
       retries += 1
     end
+
     return if retries < 10
     print_error_and_delay "Max retries downloading #{prg[:title]}"
     render
